@@ -16,7 +16,7 @@ const NavBar = () => {
   const [open, setOpen] = useState(false);
 
   return (
-    <nav className="nav-container relative m-6 flex flex-wrap items-center justify-between bg-[#17324D] p-3">
+    <nav className="nav-container relative m-6 flex flex-wrap items-center justify-between bg-[#17324D] p-3 ">
       <div className="nav-logo flex items-center gap-1">
         <img src={LogoImage} alt="logo" className="h-10 w-auto p-1" />
         <span className="p-2 font-bold text-white">PROJECT FINDER</span>

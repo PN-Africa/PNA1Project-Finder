@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import ConfirmModal from "./ConfirmModal";
+import { logout } from "../../utils/logout"; // src/utils/logout.js
 
 const ProfileMenu = ({ onNavigate }) => {
   const [open, setOpen] = useState(false);
@@ -37,7 +38,7 @@ const ProfileMenu = ({ onNavigate }) => {
     }
     setConfirmLogout(false);
     closeAll();
-    navigate("/login", { replace: true });
+    logout(navigate); // calls the API, clears the tokens, then goes to /login
   };
 
   const itemClass = "block w-full px-4 py-2 text-left text-xs text-slate-700 hover:bg-slate-50";

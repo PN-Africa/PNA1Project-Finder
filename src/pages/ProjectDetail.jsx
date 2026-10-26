@@ -1,15 +1,77 @@
-import React from "react";
-import { useParams, Link } from "react-router";
-import { projectData } from "../data";
+import React, { useEffect, useState } from "react";
+import { useParams, Link, useNavigate } from "react-router";
+import { getProject, startSimulation } from "../../src/utils/simulation";
+
+const label = (v) =>
+  v == null ? "" : typeof v === "object" ? v.name ?? v.title ?? v.label ?? "" : String(v);
+
+
+const toProject = (p = {}) => ({
+  ...p,
+  title: p.title ?? p.name ?? "Untitled project",
+  description: p.description ?? p.summary ?? "",
+  industry: label(p.industry),
+  difficulty: label(p.difficulty ?? p.level),
+  status: p.status ?? "Available", 
+  validity: p.validity,
+  scenario: p.scenario,
+  objective: p.objective ?? p.objectives,
+  tasks: p.tasks,
+  deliverables: p.deliverables ?? p.required_deliverables,
+});
 
 const ProjectDetail = () => {
-  const { id } = useParams();
-  const project = projectData.find((p) => String(p.id) === id);
+  const { id } = useParams(); 
+  const navigate = useNavigate();
 
-  if (!project) {
+  const [project, setProject] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+
+  const [starting, setStarting] = useState(false);
+  const [startError, setStartError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setLoadError("");
+      try {
+        const data = await getProject(id);
+        console.log("RAW project response:", data); // remove once everything displays correctly
+        if (!cancelled) setProject(toProject(data));
+      } catch (e) {
+        if (!cancelled) setLoadError(e.message || "Something went wrong");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  const handleStart = async () => {
+    setStarting(true);
+    setStartError("");
+    try {
+      const sim = await startSimulation(project.id ?? id);
+      navigate(`/simulation/${sim.id}`); // the simulation's id, not the project's
+    } catch (e) {
+      setStartError(e.message || "Could not start the simulation. Please try again.");
+    } finally {
+      setStarting(false);
+    }
+  };
+
+  if (loading) {
+    return <div className="p-6 text-sm text-slate-500">Loading project…</div>;
+  }
+
+  if (loadError || !project) {
     return (
       <div className="p-6">
-        <p>Project not found.</p>
+        <p>{loadError ? `Couldn't load this project. ${loadError}` : "Project not found."}</p>
         <Link to="/project-library" className="text-blue-600">
           Back to library
         </Link>
@@ -55,7 +117,7 @@ const ProjectDetail = () => {
           <h2 className="mt-6 font-semibold text-[#17324D]">What you will do</h2>
           <ol className="mt-1 list-decimal pl-5 text-slate-600">
             {project.tasks.map((t, i) => (
-              <li key={i}>{t}</li>
+              <li key={i}>{label(t) || String(t)}</li>
             ))}
           </ol>
         </>
@@ -66,7 +128,7 @@ const ProjectDetail = () => {
           <h2 className="mt-6 font-semibold text-[#17324D]">Deliverables</h2>
           <ul className="mt-1 list-disc pl-5 text-slate-600">
             {project.deliverables.map((d, i) => (
-              <li key={i}>{d}</li>
+              <li key={i}>{label(d) || String(d)}</li>
             ))}
           </ul>
         </>
@@ -74,17 +136,21 @@ const ProjectDetail = () => {
 
       <div className="mt-10 flex flex-col items-start gap-4">
         {available ? (
-          <Link
-            to={"/simulation/" + project.id}
-            className="rounded-lg bg-[#2563EB] px-6 py-2.5 font-semibold text-white hover:bg-blue-700"
+          <button
+            type="button"
+            onClick={handleStart}
+            disabled={starting}
+            className="rounded-lg bg-[#2563EB] px-6 py-2.5 font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Start
-          </Link>
+            {starting ? "Starting…" : "Start"}
+          </button>
         ) : (
           <span className="rounded-lg bg-slate-200 px-6 py-2.5 font-semibold text-slate-500">
             Unavailable
           </span>
         )}
+
+        {startError && <p className="text-sm text-red-600">{startError}</p>}
 
         <Link to="/project-library" className="text-blue-600 hover:underline">
           &larr; Back to library
