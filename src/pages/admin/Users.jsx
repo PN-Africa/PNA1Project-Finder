@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router";
 import { MdSearch, MdFilterList, MdOutlineKeyboardArrowDown } from "react-icons/md";
 
 // Mock data for now. Later, replace with a fetch to the backend users endpoint.
@@ -95,7 +96,14 @@ const Users = () => {
             <tbody>
               {visible.map((u) => (
                 <tr key={u.id}>
-                  <td className={`${td} font-semibold`}>{u.name}</td>
+                  <td className={`${td} font-semibold`}>
+                    <Link
+                      to={`/admin/users/${u.id}`}
+                      className="text-[#17355f] hover:text-blue-600 hover:underline"
+                    >
+                      {u.name}
+                    </Link>
+                  </td>
                   <td className={td}>{u.email}</td>
                   <td className={td}>{u.role}</td>
                   <td className={td}>{u.date}</td>
