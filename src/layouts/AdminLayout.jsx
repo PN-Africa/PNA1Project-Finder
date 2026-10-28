@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router";
 import {
   MdOutlineDashboard,
@@ -8,6 +8,9 @@ import {
   MdOutlinePersonOutline,
   MdLogout,
 } from "react-icons/md";
+import { AdminDataProvider } from "../context/AdminDataContext";
+import ConfirmModal from "../components/user/ConfirmModal";
+import { logout } from "../utils/auth";
 import LogoImage from "../assets/logo.jpg";
 
 const mainLinks = [
@@ -25,10 +28,12 @@ const linkClass = ({ isActive }) =>
 
 const AdminLayout = () => {
   const navigate = useNavigate();
+  const [confirmLogout, setConfirmLogout] = useState(false);
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    navigate("/login");
+    logout(); // clears token, refresh token and saved user
+    setConfirmLogout(false);
+    navigate("/login", { replace: true });
   };
 
   return (
@@ -55,7 +60,7 @@ const AdminLayout = () => {
           </NavLink>
           <button
             type="button"
-            onClick={handleLogout}
+            onClick={() => setConfirmLogout(true)}
             className={`${baseLink} cursor-pointer text-white hover:bg-white/10`}
           >
             <MdLogout size={20} />
@@ -65,8 +70,18 @@ const AdminLayout = () => {
       </aside>
 
       <main className="min-w-0 flex-1 px-4 py-6 md:px-8 md:py-10">
-        <Outlet />
+        <AdminDataProvider>
+          <Outlet />
+        </AdminDataProvider>
       </main>
+
+      <ConfirmModal
+        open={confirmLogout}
+        message="Are you sure you want to log out?"
+        confirmLabel="Log out"
+        onConfirm={handleLogout}
+        onCancel={() => setConfirmLogout(false)}
+      />
     </div>
   );
 };

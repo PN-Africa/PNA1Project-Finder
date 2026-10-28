@@ -14,12 +14,13 @@ import Dashboard from "../pages/admin/Dashboard";
 import Users from "../pages/admin/Users";
 import Submissions, { UserProfilePage } from "../pages/admin/Submissions";
 import Simulationprojects from "../pages/admin/Simulationprojects";
+import AdminProfile from "../pages/admin/Profile";
 import { ProtectedRoute, GuestRoute } from "../components/common/ProtectedRoute";
 
 const router = createBrowserRouter([
   { path: "/", element: <Navigate to="/login" replace /> },
 
-  // login and signup: only for people who are NOT logged in
+  // ---- Public: only for logged-out users ----
   {
     element: <GuestRoute />,
     children: [
@@ -33,7 +34,7 @@ const router = createBrowserRouter([
     ],
   },
 
-  // user pages: login required
+  // ---- User pages: login required ----
   {
     element: <ProtectedRoute />,
     children: [
@@ -52,9 +53,9 @@ const router = createBrowserRouter([
     ],
   },
 
-
+  // ---- Admin pages: login + admin required ----
   {
-    element: <ProtectedRoute />,
+    element: <ProtectedRoute adminOnly />,   // ← changed: added adminOnly
     children: [
       {
         path: "/admin",
@@ -65,6 +66,7 @@ const router = createBrowserRouter([
           { path: "users/:userId", element: <UserProfilePage /> },
           { path: "submissions", element: <Submissions /> },
           { path: "simulation-projects", element: <Simulationprojects /> },
+          { path: "profile", element: <AdminProfile /> },
         ],
       },
     ],

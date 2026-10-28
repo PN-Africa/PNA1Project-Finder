@@ -1,15 +1,22 @@
 import { useEffect, useState } from "react";
+import { FiArrowLeft } from "react-icons/fi";
 
 const API_BASE = "https://project-finder-q5t2.onrender.com/api";
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}` });
 
-// Used only if GET /api/projects/choices/ can't be read
+// ⚠️ Change if the backend names the file field differently (e.g. "brief_file")
+const FILE_FIELD = "brief";
+
 const FALLBACK = {
-  industries: ["Technology", "Healthcare", "FinTech", "E-commerce", "Real Estate", "EdTech"],
-  difficulties: ["Beginner", "Intermediate", "Advanced"],
+  industries: [{ value: "technology", label: "Technology" }],
+  difficulties: [
+    { value: "beginner", label: "Beginner" },
+    { value: "intermediate", label: "Intermediate" },
+    { value: "advanced", label: "Advanced" },
+  ],
+  roles: [],
 };
 
-// Turns any common "choices" shape into [{ value, label }]
 const toOptions = (list) =>
   (Array.isArray(list) ? list : []).map((o) =>
     Array.isArray(o)
@@ -20,83 +27,93 @@ const toOptions = (list) =>
   );
 
 function parseChoices(data) {
-  const find = (re) => {
+  const find = (re, fallback) => {
     const key = Object.keys(data ?? {}).find((k) => re.test(k));
-    return key ? toOptions(data[key]) : [];
+    const found = key ? toOptions(data[key]) : [];
+    return found.length ? found : fallback;
   };
-  const industries = find(/industr|categor/i);
-  const difficulties = find(/difficult|level/i);
   return {
-    industries: industries.length ? industries : toOptions(FALLBACK.industries),
-    difficulties: difficulties.length ? difficulties : toOptions(FALLBACK.difficulties),
+    industries: find(/industr|categor/i, FALLBACK.industries),
+    difficulties: find(/difficult|level/i, FALLBACK.difficulties),
+    roles: find(/role|profession/i, FALLBACK.roles),
   };
 }
 
-// { title: ["This field is required."] } -> ["title: This field is required."]
-const flattenErrors = (data) =>
-  typeof data === "string"
-    ? [data]
-    : Object.entries(data ?? {}).flatMap(([k, v]) =>
-        [].concat(v).map((m) => (k === "detail" ? String(m) : `${k}: ${typeof m === "string" ? m : JSON.stringify(m)}`))
-      );
-
-const lines = (s) => s.split("\n").map((l) => l.trim()).filter(Boolean);
-
-const empty = {
-  title: "", industry: "", difficulty: "", description: "",
-  scenario: "", business_problem: "", objective: "",
-  tasks: "", deliverables: "", validity_days: "",
+const flattenErrors = (data, prefix = "") => {
+  if (typeof data === "string") return [prefix ? `${prefix}: ${data}` : data];
+  if (Array.isArray(data)) return data.flatMap((v, i) => flattenErrors(v, typeof v === "object" && v ? `${prefix}[${i + 1}]` : prefix));
+  if (data && typeof data === "object")
+    return Object.entries(data).flatMap(([k, v]) => flattenErrors(v, k === "detail" ? "" : prefix ? `${prefix}.${k}` : k));
+  return [];
 };
 
-const input =
-  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20";
+const lines = (s) => s.split("\n").map((l) => l.trim()).filter(Boolean);
+const toDeliverable = (line) => {
+  const [name, ...rest] = line.split(/\s+[-–:]\s+|:\s+/);
+  const n = name.trim();
+  return { name: n, description: rest.join(" - ").trim() || n };
+};
 
-const Field = ({ label, hint, children }) => (
-  <label className="mt-5 block">
-    <span className="text-sm font-semibold text-[#17304d]">{label}</span>
-    {hint && <span className="ml-2 text-xs text-[#7d8c99]">{hint}</span>}
-    <div className="mt-1.5">{children}</div>
-  </label>
-);
+const empty = {
+  title: "", industry: "", difficulty_level: "", scenario_name: "",
+  scenario_description: "", business_problem: "", objective: "",
+  stakeholders: "", professional_role: "", duration_in_days: "30",
+  tasks: "", deliverables: "", is_published: true,
+};
 
-export default function CreateProject({ onCreated }) {
+const select =
+  "cursor-pointer rounded-lg bg-white px-4 py-2.5 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600 w-full md:w-auto";
+const inputClass =
+  "w-full rounded-md border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-700 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
+const labelClass = "mb-2 block text-xs font-medium text-[#17304d]";
+
+export default function CreateProject({ onBack, onCreated }) {
   const [choices, setChoices] = useState(parseChoices(null));
   const [form, setForm] = useState(empty);
+  const [file, setFile] = useState(null);
   const [errors, setErrors] = useState([]);
-  const [success, setSuccess] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     fetch(`${API_BASE}/projects/choices/`, { headers: authHeaders() })
       .then((r) => (r.ok ? r.json() : Promise.reject()))
-      .then((data) => {
-        console.log("RAW choices response:", data); // remove once the dropdowns look right
-        setChoices(parseChoices(data));
-      })
-      .catch(() => {}); // keeps the fallback options
+      .then((data) => setChoices(parseChoices(data)))
+      .catch(() => {});
   }, []);
 
-  const set = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
+  const set = (e) => {
+    const { name, value, type, checked } = e.target;
+    setForm((f) => ({ ...f, [name]: type === "checkbox" ? checked : value }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrors([]);
-    setSuccess("");
 
     const missing = [];
     if (!form.title.trim()) missing.push("Title is required");
     if (!form.industry) missing.push("Choose an industry");
-    if (!form.difficulty) missing.push("Choose a difficulty");
+    if (!form.difficulty_level) missing.push("Choose a difficulty");
+    if (!form.scenario_description.trim()) missing.push("Scenario description is required");
+    if (!(parseInt(form.duration_in_days, 10) > 0)) missing.push("Duration must be a positive number of days");
+    if (file && file.size > 10 * 1024 * 1024) missing.push("The brief is larger than 10MB");
     if (missing.length) return setErrors(missing);
 
-    // optional fields are only sent when filled in
-    const body = { title: form.title.trim(), industry: form.industry, difficulty: form.difficulty };
-    ["description", "scenario", "business_problem", "objective"].forEach((k) => {
-      if (form[k].trim()) body[k] = form[k].trim();
-    });
-    if (form.tasks.trim()) body.tasks = lines(form.tasks);
-    if (form.deliverables.trim()) body.deliverables = lines(form.deliverables);
-    if (form.validity_days) body.validity_days = Number(form.validity_days);
+    const body = {
+      title: form.title.trim(),
+      scenario_name: form.scenario_name.trim(),
+      scenario_description: form.scenario_description.trim(),
+      business_problem: form.business_problem.trim(),
+      objective: form.objective.trim(),
+      professional_role: form.professional_role.trim(),
+      duration_in_days: parseInt(form.duration_in_days, 10),
+      industry: form.industry,
+      difficulty_level: form.difficulty_level,
+      stakeholders: form.stakeholders.split(/[\n,]/).map((x) => x.trim()).filter(Boolean),
+      tasks: lines(form.tasks),
+      deliverables: lines(form.deliverables).map(toDeliverable),
+      is_published: form.is_published,
+    };
 
     setSaving(true);
     try {
@@ -107,12 +124,29 @@ export default function CreateProject({ onCreated }) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setErrors(res.status === 403 ? ["Your account isn't allowed to create projects (403)."] : flattenErrors(data));
+        setErrors(
+          res.status === 401 ? ["You're not logged in (401). Please sign in again."]
+          : res.status === 403 ? ["Your account isn't allowed to create projects (403)."]
+          : [`Could not create the project (${res.status}):`, ...flattenErrors(data)]
+        );
         return;
       }
-      setSuccess(`"${form.title.trim()}" was added. It will now show in the Project Library.`);
+
+      // Optional brief: best-effort upload after the project exists
+      if (file && data.id) {
+        const fd = new FormData();
+        fd.append(FILE_FIELD, file);
+        const up = await fetch(`${API_BASE}/projects/${data.id}/`, {
+          method: "PATCH",
+          headers: authHeaders(),
+          body: fd,
+        }).catch(() => null);
+        if (!up || !up.ok) window.alert("The project was created, but the brief file could not be uploaded.");
+      }
+
       setForm(empty);
-      onCreated?.(); // lets the list page refresh itself
+      setFile(null);
+      onCreated?.();
     } catch {
       setErrors(["Network error. Please try again."]);
     } finally {
@@ -120,70 +154,95 @@ export default function CreateProject({ onCreated }) {
     }
   };
 
+  const field = (name, text, ph, { rows, type = "text" } = {}) => (
+    <div key={name}>
+      <label htmlFor={name} className={labelClass}>{text}</label>
+      {rows ? (
+        <textarea id={name} name={name} rows={rows} value={form[name]} onChange={set} placeholder={ph} className={inputClass} />
+      ) : (
+        <input id={name} name={name} type={type} value={form[name]} onChange={set} placeholder={ph} className={inputClass} />
+      )}
+    </div>
+  );
+
   return (
-    <section className="min-h-full bg-[#edf3f1] p-5 text-[#17304d] sm:p-8">
-      <h1 className="mb-2 text-3xl font-semibold">Add project</h1>
-      <p className="text-sm text-[#7d8c99]">Add a project. It appears in the user library under its industry and difficulty.</p>
+    <section className="min-h-screen bg-[#edf3f1] p-5 text-[#17304d] sm:p-8">
+      <div className="mx-auto max-w-4xl">
+        <button type="button" onClick={onBack} className="mb-6 flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-blue-600">
+  <FiArrowLeft aria-hidden="true" className="h-4 w-4" />
+  Back to projects
+</button>
+        <h1 className="mb-8 text-xl font-medium">Create Simulation Project</h1>
 
-      <form onSubmit={handleSubmit} noValidate className="mt-4 max-w-2xl">
-        <Field label="Title">
-          <input name="title" value={form.title} onChange={set} className={input} placeholder="e.g. Healthcare Improvement Process" />
-        </Field>
+        <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-6">
+          {field("title", "Project Title", "Enter project title")}
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Industry">
-            <select name="industry" value={form.industry} onChange={set} className={input}>
-              <option value="">Select industry</option>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <select aria-label="Industry" name="industry" value={form.industry} onChange={set} className={select}>
+              <option value="">Industry</option>
               {choices.industries.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
-          </Field>
-          <Field label="Difficulty">
-            <select name="difficulty" value={form.difficulty} onChange={set} className={input}>
-              <option value="">Select difficulty</option>
+            <select aria-label="Difficulty" name="difficulty_level" value={form.difficulty_level} onChange={set} className={select}>
+              <option value="">Difficulty</option>
               {choices.difficulties.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
-          </Field>
-        </div>
+          </div>
 
-        <Field label="Description" hint="optional">
-          <textarea name="description" rows={2} value={form.description} onChange={set} className={input} />
-        </Field>
-        <Field label="Scenario" hint="optional">
-          <textarea name="scenario" rows={3} value={form.scenario} onChange={set} className={input} />
-        </Field>
-        <Field label="Business problem" hint="optional">
-          <textarea name="business_problem" rows={2} value={form.business_problem} onChange={set} className={input} />
-        </Field>
-        <Field label="Objective" hint="optional">
-          <textarea name="objective" rows={2} value={form.objective} onChange={set} className={input} />
-        </Field>
-        <Field label="Tasks" hint="optional, one per line">
-          <textarea name="tasks" rows={4} value={form.tasks} onChange={set} className={input} />
-        </Field>
-        <Field label="Deliverables" hint="optional, one per line">
-          <textarea name="deliverables" rows={3} value={form.deliverables} onChange={set} className={input} />
-        </Field>
-        <Field label="Validity (days)" hint="optional">
-          <input name="validity_days" type="number" min="1" value={form.validity_days} onChange={set} className={input} />
-        </Field>
+          {field("scenario_name", "Company / Scenario Name", "Enter company or scenario name")}
+          {field("scenario_description", "Scenario Description", "Describe the project scenario", { rows: 3 })}
+          {field("business_problem", "Business Problem", "Describe the business problem", { rows: 3 })}
+          {field("objective", "Project Objective", "Describe the project objective", { rows: 3 })}
+          {field("stakeholders", "Stakeholders / Team (comma separated)", "e.g. CEO, Head of Product, Data Team")}
 
-        {errors.length > 0 && (
-          <ul className="mt-5 list-disc rounded-md border border-red-300 bg-red-100 py-2 pl-7 pr-3 text-sm text-red-800">
-            {errors.map((m, i) => <li key={i}>{m}</li>)}
-          </ul>
-        )}
-        {success && (
-          <p className="mt-5 rounded-md border border-green-300 bg-green-100 px-3 py-2 text-sm text-green-800">{success}</p>
-        )}
+          <div>
+            <label htmlFor="professional_role" className={labelClass}>Professional Role</label>
+            {choices.roles.length ? (
+              <select id="professional_role" name="professional_role" value={form.professional_role} onChange={set} className={select}>
+                <option value="">Select professional role</option>
+                {choices.roles.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            ) : (
+              <input id="professional_role" name="professional_role" value={form.professional_role} onChange={set} placeholder="e.g. Data Analyst" className={inputClass} />
+            )}
+          </div>
 
-        <button
-          type="submit"
-          disabled={saving}
-          className="mt-6 rounded-lg bg-blue-600 px-6 py-2.5 font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {saving ? "Saving…" : "Add project"}
-        </button>
-      </form>
+          {field("duration_in_days", "Duration (days)", "30", { type: "number" })}
+          {field("tasks", "Tasks (one per line)", "Enter assigned tasks, one per line", { rows: 4 })}
+          {field("deliverables", "Required Deliverables (one per line, optional “Name - description”)", "Final report - A 10 page summary of findings", { rows: 3 })}
+
+          <div>
+            <label className={labelClass}>Project Brief (optional)</label>
+            <div className="relative flex flex-col items-center justify-center rounded-md border border-gray-200 bg-white px-6 py-8 text-center transition-colors hover:bg-gray-50">
+              <input type="file" aria-label="Upload project brief" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" accept=".pdf,.doc,.docx,.xlsx" />
+              <svg className="mb-2 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+              </svg>
+              <span className="text-sm font-medium">{file?.name || "Upload a document"}</span>
+              <span className="mt-1 text-xs text-gray-400">PDF, DOCX or XLSX: Max 10MB</span>
+            </div>
+          </div>
+
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" name="is_published" checked={form.is_published} onChange={set} />
+            Publish immediately
+          </label>
+
+          {errors.length > 0 && (
+            <ul role="alert" className="list-disc rounded-md border border-red-300 bg-red-100 py-2 pl-7 pr-3 text-sm text-red-800">
+              {errors.map((m, i) => <li key={i}>{m}</li>)}
+            </ul>
+          )}
+
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+            <button type="button" onClick={onBack} className="w-full rounded-md border border-blue-500 bg-white px-6 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 sm:w-auto">
+              Cancel
+            </button>
+            <button type="submit" disabled={saving} className="w-full rounded-md bg-[#2563EB] px-6 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto">
+              {saving ? "Saving…" : "Save Project"}
+            </button>
+          </div>
+        </form>
+      </div>
     </section>
   );
 }

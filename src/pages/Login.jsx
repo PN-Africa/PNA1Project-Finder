@@ -2,9 +2,13 @@ import React, { useState } from "react";
 import LogoImage from "../assets/logo.jpg";
 import { useNavigate, NavLink } from "react-router";
 import { IoMdEye, IoMdEyeOff } from "react-icons/io";
+import { setSession, getCurrentUser, isAdmin, logout as clearSession } from "../utils/auth";
 
 const API_BASE = "https://project-finder-q5t2.onrender.com/api";
 const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+
+const VERIFY_ADMIN = false;
 
 const inputBase =
   "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-[0.95rem] text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-600 focus:ring-[3px] focus:ring-blue-600/15 transition sm:text-base";
@@ -15,6 +19,7 @@ const Login = () => {
   const navigate = useNavigate();
 
   const [view, setView] = useState("signin"); // "signin" | "forgot" | "forgot-sent"
+  const [loginAs, setLoginAs] = useState("user"); // "user" | "admin"
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState("");
@@ -24,6 +29,14 @@ const Login = () => {
 
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotError, setForgotError] = useState("");
+
+  const isAdminTab = loginAs === "admin";
+
+  const switchTab = (role) => {
+    setLoginAs(role);
+    setServerError("");
+    setErrors({ email: "", password: "" });
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -86,12 +99,17 @@ const Login = () => {
         );
         return;
       }
-     localStorage.setItem("token", data.access);
-if (data.refresh) localStorage.setItem("refresh", data.refresh);
 
-const u = data.user ?? {};
-const isAdmin = u.is_staff || u.is_superuser || u.role === "admin";
-navigate(isAdmin ? "/admin/submissions" : "/project-library");
+      // saves token, refresh and the user from the response
+      setSession(data);
+
+      if (isAdminTab && VERIFY_ADMIN && !isAdmin(getCurrentUser())) {
+        clearSession(); // don't keep a session for a non-admin account
+        setServerError("This account is not an admin account.");
+        return;
+      }
+
+      navigate(isAdminTab ? "/admin" : "/project-library");
     } catch {
       setServerError("Network error. Please try again.");
     } finally {
@@ -107,7 +125,7 @@ navigate(isAdmin ? "/admin/submissions" : "/project-library");
 
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/auth/password/reset/`, {
+      const res = await fetch(`${API_BASE}/auth/password/reset/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: forgotEmail }),
@@ -127,6 +145,13 @@ navigate(isAdmin ? "/admin/submissions" : "/project-library");
     }
   };
 
+  const openForgot = () => {
+    setView("forgot");
+    setForgotEmail(form.email);
+    setForgotError("");
+    setServerError("");
+  };
+
   return (
     <div className="mx-auto my-32 w-full max-w-[400px] rounded-xl bg-white px-7 py-8 text-center shadow-[0_2px_12px_rgba(15,31,61,0.08)] max-[480px]:px-5 max-[480px]:py-6">
       {/* Logo / heading */}
@@ -140,8 +165,30 @@ navigate(isAdmin ? "/admin/submissions" : "/project-library");
       {/* ============ SIGN IN ============ */}
       {view === "signin" && (
         <>
+          {/* User / Admin toggle */}
+          <div
+            role="tablist"
+            aria-label="Log in as"
+            className="mt-5 grid grid-cols-2 rounded-lg bg-slate-100 p-1 text-sm font-medium"
+          >
+            {["user", "admin"].map((r) => (
+              <button
+                key={r}
+                type="button"
+                role="tab"
+                aria-selected={loginAs === r}
+                onClick={() => switchTab(r)}
+                className={`rounded-md py-2 capitalize transition ${
+                  loginAs === r ? "bg-white text-blue-600 shadow" : "text-slate-500"
+                }`}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
+
           <h3 className="my-5 mb-6 text-[1.4rem] text-slate-500 max-[480px]:my-4 max-[480px]:mb-5 max-[480px]:text-xl">
-            Welcome Back
+            {isAdminTab ? "Admin Login" : "Welcome Back"}
           </h3>
 
           <form onSubmit={handleLogin} noValidate className="flex flex-col text-left">
@@ -194,46 +241,44 @@ navigate(isAdmin ? "/admin/submissions" : "/project-library");
               </p>
             )}
 
-            <div className="mb-3 flex justify-end">
-              <span
-                role="button"
-                tabIndex={0}
-                onClick={() => {
-                  setView("forgot");
-                  setForgotEmail(form.email);
-                  setForgotError("");
-                  setServerError("");
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    setView("forgot");
-                    setForgotEmail(form.email);
-                    setForgotError("");
-                    setServerError("");
-                  }
-                }}
-                className="cursor-pointer select-none text-sm text-slate-700 hover:text-slate-900 hover:underline"
-              >
-                Forgot password?
-              </span>
-            </div>
+            {/* Admin passwords are managed by the backend, so no reset link there */}
+            {!isAdminTab && (
+              <div className="mb-3 flex justify-end">
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={openForgot}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      openForgot();
+                    }
+                  }}
+                  className="cursor-pointer select-none text-sm text-slate-700 hover:text-slate-900 hover:underline"
+                >
+                  Forgot password?
+                </span>
+              </div>
+            )}
 
             <button
               type="submit"
               disabled={loading}
               className="mt-1.5 rounded-lg bg-blue-600 py-3 text-base font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 max-[480px]:min-h-[44px]"
             >
-              {loading ? "Signing in…" : "Log In"}
+              {loading ? "Signing in…" : isAdminTab ? "Log In as Admin" : "Log In"}
             </button>
           </form>
 
-          <p className="p-2 text-sm text-slate-600">
-            Don't have an account?{" "}
-            <NavLink to="/signup" className="font-medium text-blue-600 hover:underline">
-              Sign Up
-            </NavLink>
-          </p>
+          {/* Admins can't sign up: accounts are created by the backend team */}
+          {!isAdminTab && (
+            <p className="p-2 text-sm text-slate-600">
+              Don't have an account?{" "}
+              <NavLink to="/signup" className="font-medium text-blue-600 hover:underline">
+                Sign Up
+              </NavLink>
+            </p>
+          )}
         </>
       )}
 

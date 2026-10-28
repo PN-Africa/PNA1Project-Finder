@@ -1,52 +1,107 @@
+// src/utils/simulation.js
 const API_BASE = "https://project-finder-q5t2.onrender.com/api";
 
+const getToken = () =>
+  localStorage.getItem("token") || localStorage.getItem("access") || "";
+
 const authHeaders = () => ({
-  Authorization: `Bearer ${localStorage.getItem("token")}`,
+  Authorization: `Bearer ${getToken()}`,
 });
 
-// Turns a DRF error body like { project: ["This field is required."] } into one readable line
+// Coerce to number if it looks like one, otherwise leave as-is (UUIDs, etc.)
+const normalizeId = (v) => {
+  if (v == null) return v;
+  const n = Number(v);
+  return Number.isFinite(n) && String(n) === String(v).trim() ? n : v;
+};
+
+// DRF returns errors like:
+//   { "detail": "..." }
+//   { "project": ["This field is required."] }
+//   { "non_field_errors": ["..."] }
+// This flattens them into one readable string.
 async function readError(res) {
-  const data = await res.json().catch(() => ({}));
-  const first = Object.values(data).flat()[0];
-  return data.detail || (typeof first === "string" ? first : `Request failed (${res.status})`);
+  let data = null;
+  try {
+    data = await res.json();
+  } catch {
+    /* not JSON */
+  }
+  if (!data) return `Request failed (${res.status})`;
+  if (typeof data === "string") return data;
+  if (data.detail) return data.detail;
+  const first = Object.values(data).flat?.()[0];
+  if (typeof first === "string") return first;
+  return `Request failed (${res.status})`;
 }
 
+// Unwrap a create/get response that might be wrapped in { simulation: {...} } or { data: {...} }
+const unwrapSimulation = (raw) => {
+  if (!raw || typeof raw !== "object") return raw;
+  if (raw.simulation && typeof raw.simulation === "object") return raw.simulation;
+  if (raw.data && typeof raw.data === "object" && !Array.isArray(raw.data)) {
+    return raw.data;
+  }
+  return raw;
+};
+
 // POST /api/simulations/  -> starts a simulation for the logged-in user
-// The body field name is a guess ("project"); the error message will say if it differs.
 export async function startSimulation(projectId) {
+  const id = normalizeId(projectId);
+
+  const payload = { project: id, project_id: id };
+
   const res = await fetch(`${API_BASE}/simulations/`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: JSON.stringify({ project: projectId }),
+    body: JSON.stringify(payload),
   });
-  if (!res.ok) throw new Error(await readError(res));
-  return res.json(); // the new simulation (use its id for the next steps)
+
+  if (!res.ok) {
+    const msg = await readError(res);
+    console.error("startSimulation failed:", {
+      status: res.status,
+      sentPayload: payload,
+      errorMessage: msg,
+    });
+    throw new Error(msg);
+  }
+
+  const raw = await res.json();
+  console.log("startSimulation response:", raw); // remove later
+  return unwrapSimulation(raw);
 }
 
 // GET /api/simulations/{id}/  -> one simulation's details
 export async function getSimulation(id) {
-  const res = await fetch(`${API_BASE}/simulations/${id}/`, { headers: authHeaders() });
+  const res = await fetch(`${API_BASE}/simulations/${id}/`, {
+    headers: authHeaders(),
+  });
   if (!res.ok) throw new Error(await readError(res));
-  return res.json();
+  const raw = await res.json();
+  return unwrapSimulation(raw);
 }
 
-// GET /api/projects/{id}/  -> used when a simulation only holds the project's id
+// GET /api/projects/{id}/
 export async function getProject(id) {
-  const res = await fetch(`${API_BASE}/projects/${id}/`, { headers: authHeaders() });
+  const res = await fetch(`${API_BASE}/projects/${id}/`, {
+    headers: authHeaders(),
+  });
   if (!res.ok) throw new Error(await readError(res));
   return res.json();
 }
 
-// POST /api/simulations/{id}/submit/  -> marks the simulation as submitted.
-// Files go as multipart form data (field name "files" is a guess: check the docs' request body).
+// POST /api/simulations/{id}/submit/  -> marks the simulation as submitted
 export async function submitSimulation(id, files = []) {
   const body = new FormData();
   files.forEach((f) => body.append("files", f));
+
   const res = await fetch(`${API_BASE}/simulations/${id}/submit/`, {
     method: "POST",
-    headers: authHeaders(), // no Content-Type: the browser sets it for FormData
+    headers: authHeaders(), // browser sets multipart Content-Type automatically
     body,
   });
+
   if (!res.ok) throw new Error(await readError(res));
   return res.json().catch(() => ({}));
 }
