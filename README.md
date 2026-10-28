@@ -1,16 +1,57 @@
-# React + Vite
+# Project Finder
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A web app that connects users with real-world project simulations. Users can browse a project library, start simulations, and submit their work. Admins manage users, submissions, and projects through an admin dashboard.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Authentication: login, signup, forgot password
+- Project library: browse and search available projects
+- Simulations: start a project, track time, submit deliverables
+- Profile: view and edit user info
+- Admin panel: dashboard, users, submissions, project management
 
-## React Compiler
+## Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Frontend:
+- React 18
+- React Router v7
+- Tailwind CSS
+- Vite
+- react-icons
 
-## Expanding the ESLint configuration
+Backend:
+- Django REST Framework
+- SimpleJWT / djoser for authentication
+- Hosted on Render
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18+
+- npm or yarn
+
+### Installation
+
+```bash
+git clone https://github.com/YOUR_USERNAME/project_finder.git
+cd project_finder
+npm install
+
+
+src/
+├── api/              API helper functions
+├── assets/           Images, logos
+├── components/       Reusable UI components
+│   ├── common/       ProtectedRoute, shared widgets
+│   └── user/         User-facing components
+├── context/          React context (AdminDataProvider)
+├── layouts/          AuthLayout, MainLayout, AdminLayout
+├── pages/
+│   ├── admin/        Admin pages (Dashboard, Users, etc.)
+│   ├── Login.jsx
+│   ├── SignUp.jsx
+│   └── ...
+├── utils/            Helpers (auth, api, simulation)
+├── router.jsx        App routing
+└── main.jsx          Entry point

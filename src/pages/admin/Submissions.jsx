@@ -5,7 +5,7 @@ import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 const API_BASE = "https://project-finder-q5t2.onrender.com/api";
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}` });
 
-// ⚠️ Confirm these in DevTools → Network. Change them if the backend uses different paths.
+
 const SUBMISSIONS_URL = `${API_BASE}/simulations/?page_size=100`;
 const userUrl = (id) => `${API_BASE}/users/${id}/`; // only used for the profile page
 const USER_ROUTE = (id) => `/admin/users/${id}`;
@@ -14,7 +14,7 @@ const PAGE_SIZE = 10;
 const NAVY = "text-[#17304d]";
 const MUTED = "text-[#7d8c99]";
 
-/* ---------- data helpers ---------- */
+
 
 async function getJson(url) {
   const res = await fetch(url, { headers: authHeaders() });
@@ -36,7 +36,7 @@ const personName = (u) => {
 
 const countOf = (v) => (Array.isArray(v) ? v.length : Number(v) || 0);
 
-// Reads a submission/simulation whichever field names the backend uses
+
 function toRow(s) {
   const who = s.user ?? s.student ?? s.owner;
   const project = s.project;
@@ -63,12 +63,12 @@ function useFetch(fn, deps) {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, deps);
   return state;
 }
 
-/* ---------- layout ---------- */
+
 
 const Page = ({ title, children }) => (
   <section className={`min-h-full bg-[#edf3f1] p-5 sm:p-8 ${NAVY}`}>
@@ -113,7 +113,7 @@ function SubmissionsTable({ rows }) {
   );
 }
 
-/* ---------- submissions page ---------- */
+
 
 export function SubmissionsPage() {
   const [status, setStatus] = useState("");
@@ -168,7 +168,7 @@ export function SubmissionsPage() {
   );
 }
 
-/* ---------- user profile page ---------- */
+
 
 function SimulationHistory({ simulations }) {
   if (!simulations.length) return <p className={MUTED}>No simulations started yet</p>;

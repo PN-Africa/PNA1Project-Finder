@@ -29,7 +29,7 @@ export const saveProfile = (profile) => {
   try {
     localStorage.setItem(KEY, JSON.stringify(profile));
   } catch {
-    /* storage unavailable, ignore */
+    
   }
 };
 

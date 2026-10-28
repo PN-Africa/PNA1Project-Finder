@@ -4,7 +4,6 @@ import { FiArrowLeft } from "react-icons/fi";
 const API_BASE = "https://project-finder-q5t2.onrender.com/api";
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}` });
 
-// ⚠️ Change if the backend names the file field differently (e.g. "brief_file")
 const FILE_FIELD = "brief";
 
 const FALLBACK = {
@@ -132,7 +131,7 @@ export default function CreateProject({ onBack, onCreated }) {
         return;
       }
 
-      // Optional brief: best-effort upload after the project exists
+      
       if (file && data.id) {
         const fd = new FormData();
         fd.append(FILE_FIELD, file);

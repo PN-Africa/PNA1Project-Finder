@@ -8,24 +8,20 @@ const authHeaders = () => ({
   Authorization: `Bearer ${getToken()}`,
 });
 
-// Coerce to number if it looks like one, otherwise leave as-is (UUIDs, etc.)
+
 const normalizeId = (v) => {
   if (v == null) return v;
   const n = Number(v);
   return Number.isFinite(n) && String(n) === String(v).trim() ? n : v;
 };
 
-// DRF returns errors like:
-//   { "detail": "..." }
-//   { "project": ["This field is required."] }
-//   { "non_field_errors": ["..."] }
-// This flattens them into one readable string.
+
 async function readError(res) {
   let data = null;
   try {
     data = await res.json();
   } catch {
-    /* not JSON */
+    
   }
   if (!data) return `Request failed (${res.status})`;
   if (typeof data === "string") return data;
@@ -35,7 +31,7 @@ async function readError(res) {
   return `Request failed (${res.status})`;
 }
 
-// Unwrap a create/get response that might be wrapped in { simulation: {...} } or { data: {...} }
+
 const unwrapSimulation = (raw) => {
   if (!raw || typeof raw !== "object") return raw;
   if (raw.simulation && typeof raw.simulation === "object") return raw.simulation;
@@ -45,7 +41,7 @@ const unwrapSimulation = (raw) => {
   return raw;
 };
 
-// POST /api/simulations/  -> starts a simulation for the logged-in user
+
 export async function startSimulation(projectId) {
   const id = normalizeId(projectId);
 
@@ -72,7 +68,6 @@ export async function startSimulation(projectId) {
   return unwrapSimulation(raw);
 }
 
-// GET /api/simulations/{id}/  -> one simulation's details
 export async function getSimulation(id) {
   const res = await fetch(`${API_BASE}/simulations/${id}/`, {
     headers: authHeaders(),
@@ -82,7 +77,7 @@ export async function getSimulation(id) {
   return unwrapSimulation(raw);
 }
 
-// GET /api/projects/{id}/
+
 export async function getProject(id) {
   const res = await fetch(`${API_BASE}/projects/${id}/`, {
     headers: authHeaders(),
@@ -91,14 +86,14 @@ export async function getProject(id) {
   return res.json();
 }
 
-// POST /api/simulations/{id}/submit/  -> marks the simulation as submitted
+
 export async function submitSimulation(id, files = []) {
   const body = new FormData();
   files.forEach((f) => body.append("files", f));
 
   const res = await fetch(`${API_BASE}/simulations/${id}/submit/`, {
     method: "POST",
-    headers: authHeaders(), // browser sets multipart Content-Type automatically
+    headers: authHeaders(), 
     body,
   });
 

@@ -9,7 +9,7 @@ const label = (v) =>
 const inputClass =
   "w-full rounded-md border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-700 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
 
-// Reads a field whichever name the backend uses
+
 const pick = (obj, ...keys) => {
   for (const k of keys) if (obj?.[k] != null && obj[k] !== "") return obj[k];
   return "";
@@ -70,7 +70,7 @@ export default function StudentSimulation({ id, onBack }) {
     setSubmitting(true);
     setSubmitError("");
     try {
-      // ⚠️ Rename these keys if your backend expects different ones.
+      
       const body = new FormData();
       if (notes.trim()) body.append("notes", notes.trim());
       if (link.trim()) body.append("link", link.trim());
@@ -155,7 +155,7 @@ export default function StudentSimulation({ id, onBack }) {
               </a>
             )}
 
-            {/* Submission */}
+            
             <form
               onSubmit={handleSubmit}
               className="flex flex-col gap-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm"

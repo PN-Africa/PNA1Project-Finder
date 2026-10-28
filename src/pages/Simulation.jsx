@@ -19,7 +19,6 @@ const getTimeLeft = (end) => {
 const label = (v) =>
   v == null ? "" : typeof v === "object" ? v.name ?? v.title ?? v.label ?? "" : String(v);
 
-// Accepts either camelCase or snake_case from the backend
 const toProject = (p = {}) => ({
   ...p,
   title: p.title ?? p.name ?? "Untitled project",
@@ -63,7 +62,7 @@ const Simulation = () => {
   const inputRef = useRef(null);
   const replaceIndex = useRef(null); // null = adding, number = replacing that file
 
-  // load the simulation, then its project
+  
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -71,9 +70,8 @@ const Simulation = () => {
       setLoadError("");
       try {
         const sim = await getSimulation(id);
-        console.log("RAW simulation response:", sim); // remove once everything displays correctly
+        console.log("RAW simulation response:", sim); 
 
-        // the project may be nested in the simulation, or just an id
         let p = sim.project ?? sim.project_detail;
         if (p && typeof p !== "object") p = await getProject(p);
         if (!p && sim.project_id) p = await getProject(sim.project_id);
@@ -94,7 +92,7 @@ const Simulation = () => {
     };
   }, [id]);
 
-  // countdown: uses the simulation's start time from the backend
+ 
   useEffect(() => {
     if (!project || !startedAt) return;
     const end = startedAt + (project.validityDays || 90) * 86400000;
@@ -296,7 +294,7 @@ const Simulation = () => {
         </ul>
       </Section>
 
-      {/* submit */}
+      //submit
       <Section title="Submit Simulation">
         <button
           type="button"

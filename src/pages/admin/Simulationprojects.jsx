@@ -5,18 +5,17 @@ import CreateProject from "./CreateProject";
 const API_BASE = "https://project-finder-q5t2.onrender.com/api";
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}` });
 
-/* ---------- helpers ---------- */
+
 
 const label = (v) =>
   v == null ? "" : typeof v === "object" ? v.name ?? v.title ?? v.label ?? "" : String(v);
 
-// Reads a field whichever name the backend uses
+
 const pick = (obj, ...keys) => {
   for (const k of keys) if (obj?.[k] != null && obj[k] !== "") return obj[k];
   return "";
 };
 
-// Turns strings, arrays and { name, description } objects into plain text
 const text = (v) =>
   Array.isArray(v)
     ? v
@@ -42,7 +41,6 @@ const select =
   "cursor-pointer rounded-lg bg-white px-4 py-2.5 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600 w-full md:w-auto";
 const pill = "inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700";
 
-/* ---------- small pieces ---------- */
 
 function BackButton({ onClick }) {
   return (
@@ -67,7 +65,7 @@ function Block({ title, children }) {
   );
 }
 
-/* ---------- detail view ---------- */
+
 
 function ProjectDetail({ id, onBack }) {
   const [sim, setSim] = useState(null);
@@ -153,7 +151,6 @@ function ProjectDetail({ id, onBack }) {
   );
 }
 
-/* ---------- list view + routing between list / create / detail ---------- */
 
 export default function SimulationProjects() {
   const [adding, setAdding] = useState(false);

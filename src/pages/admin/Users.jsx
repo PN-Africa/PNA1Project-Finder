@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-// import { Link } from "react-router"; // re-enable with the detail route
+
 import {
   MdSearch,
   MdFilterList,

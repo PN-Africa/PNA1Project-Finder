@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { MdSearch, MdFilterList, MdOutlineKeyboardArrowDown } from "react-icons/md";
 
-// Mock data for now. Later, replace with a fetch to the backend users endpoint.
+
 const mockUsers = [
   { id: 1, name: "Sarah Wilson", email: "sarah@email.com", role: "Business Analyst", date: "23 September 2026", started: 3, submissions: 2 },
   { id: 2, name: "Merit Gold", email: "merit@email.com", role: "Product Manager", date: "20 September 2026", started: 2, submissions: 1 },

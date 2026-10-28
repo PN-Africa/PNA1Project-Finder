@@ -19,7 +19,6 @@ export const getToken = () => {
   }
 };
 
-// valid = exists and hasn't expired (if it's a JWT we can read the expiry)
 export const isTokenValid = (token) => {
   if (!token) return false;
   const payload = decodeToken(token);
@@ -29,14 +28,14 @@ export const isTokenValid = (token) => {
 
 export const isLoggedIn = () => isTokenValid(getToken());
 
-// call this with the login response
+
 export const setSession = (data) => {
   try {
     localStorage.setItem(TOKEN_KEY, data.access);
     if (data.refresh) localStorage.setItem(REFRESH_KEY, data.refresh);
     if (data.user) localStorage.setItem(USER_KEY, JSON.stringify(data.user));
   } catch {
-    /* storage unavailable */
+    
   }
 };
 
@@ -45,9 +44,9 @@ export const getCurrentUser = () => {
     const saved = JSON.parse(localStorage.getItem(USER_KEY));
     if (saved) return saved;
   } catch {
-    /* fall through */
+    
   }
-  // fallback: whatever the token itself carries
+  
   return decodeToken(getToken() || "");
 };
 
@@ -57,11 +56,10 @@ export const logout = () => {
     localStorage.removeItem(REFRESH_KEY);
     localStorage.removeItem(USER_KEY);
   } catch {
-    /* storage unavailable */
+    
   }
 };
 
-// adjust these field names to whatever your backend sends (see step 2 below)
 export const isAdmin = (user) =>
   Boolean(
     user?.is_staff ||

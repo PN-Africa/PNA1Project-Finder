@@ -20,7 +20,6 @@ import { ProtectedRoute, GuestRoute } from "../components/common/ProtectedRoute"
 const router = createBrowserRouter([
   { path: "/", element: <Navigate to="/login" replace /> },
 
-  // ---- Public: only for logged-out users ----
   {
     element: <GuestRoute />,
     children: [
@@ -34,7 +33,7 @@ const router = createBrowserRouter([
     ],
   },
 
-  // ---- User pages: login required ----
+  
   {
     element: <ProtectedRoute />,
     children: [
@@ -53,9 +52,8 @@ const router = createBrowserRouter([
     ],
   },
 
-  // ---- Admin pages: login + admin required ----
   {
-    element: <ProtectedRoute adminOnly />,   // ← changed: added adminOnly
+    element: <ProtectedRoute adminOnly />, 
     children: [
       {
         path: "/admin",

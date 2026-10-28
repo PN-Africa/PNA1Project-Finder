@@ -18,7 +18,7 @@ const inputError =
 const Login = () => {
   const navigate = useNavigate();
 
-  const [view, setView] = useState("signin"); // "signin" | "forgot" | "forgot-sent"
+  const [view, setView] = useState("signin"); 
   const [loginAs, setLoginAs] = useState("user"); // "user" | "admin"
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -100,7 +100,7 @@ const Login = () => {
         return;
       }
 
-      // saves token, refresh and the user from the response
+      
       setSession(data);
 
       if (isAdminTab && VERIFY_ADMIN && !isAdmin(getCurrentUser())) {
@@ -162,7 +162,7 @@ const Login = () => {
         </h1>
       </div>
 
-      {/* ============ SIGN IN ============ */}
+      
       {view === "signin" && (
         <>
           {/* User / Admin toggle */}
@@ -241,7 +241,7 @@ const Login = () => {
               </p>
             )}
 
-            {/* Admin passwords are managed by the backend, so no reset link there */}
+            
             {!isAdminTab && (
               <div className="mb-3 flex justify-end">
                 <span
@@ -270,7 +270,7 @@ const Login = () => {
             </button>
           </form>
 
-          {/* Admins can't sign up: accounts are created by the backend team */}
+          
           {!isAdminTab && (
             <p className="p-2 text-sm text-slate-600">
               Don't have an account?{" "}
@@ -282,7 +282,7 @@ const Login = () => {
         </>
       )}
 
-      {/* ============ FORGOT ============ */}
+      
       {view === "forgot" && (
         <>
           <h3 className="my-5 mb-6 text-[1.4rem] text-slate-500 max-[480px]:my-4 max-[480px]:mb-5 max-[480px]:text-xl">
@@ -332,7 +332,7 @@ const Login = () => {
         </>
       )}
 
-      {/* ============ FORGOT-SENT ============ */}
+      
       {view === "forgot-sent" && (
         <>
           <h3 className="my-5 mb-6 text-[1.4rem] text-slate-500 max-[480px]:my-4 max-[480px]:mb-5 max-[480px]:text-xl">

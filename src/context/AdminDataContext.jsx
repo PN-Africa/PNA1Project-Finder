@@ -4,11 +4,11 @@ import { isAdmin } from "../utils/auth";
 
 const AdminDataContext = createContext(null);
 
-// ---- adjust these to match your backend's field names ----
+
 const userIdOf = (s) => s.user?.id ?? s.user ?? s.user_id;
 const projectIdOf = (s) => s.project?.id ?? s.project ?? s.project_id;
 const isSubmitted = (s) => String(s.status || "").toLowerCase() === "submitted";
-// -----------------------------------------------------------
+
 
 export const AdminDataProvider = ({ children }) => {
   const [data, setData] = useState({
@@ -25,7 +25,7 @@ export const AdminDataProvider = ({ children }) => {
     setError("");
 
     const endpoints = {
-      users: "/auth/users/?page_size=100",       // ← was /auth/user/  (now plural)
+      users: "/auth/users/?page_size=100",    
       submissions: "/simulations/?page_size=100",
       projects: "/projects/?page_size=100",
     };

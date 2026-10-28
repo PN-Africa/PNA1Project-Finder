@@ -18,7 +18,7 @@ const SignUp = () => {
   const [serverError, setServerError] = useState("");
   const [success, setSuccess] = useState(false);
 
-  // "fullName" is what the user types; the backend username is built from the email
+
   const [form, setForm] = useState({
     fullName: "",
     email: "",
@@ -61,7 +61,7 @@ const SignUp = () => {
             : value.length < 8
             ? "Password must be at least 8 characters"
             : "";
-        // keep the confirm field in sync if it was already filled
+        
         if (form.confirmPassword !== "") {
           next.confirmPassword =
             value !== form.confirmPassword ? "Passwords do not match" : "";

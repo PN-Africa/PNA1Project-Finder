@@ -57,7 +57,7 @@ const ProjectDetail = () => {
       const projectId = project.id ?? id;
       const sim = await startSimulation(projectId);
 
-      // Backend must return something with an id we can navigate to.
+      
       const simId = sim?.id ?? sim?.simulation_id ?? sim?.pk;
       if (!simId) {
         console.error("startSimulation returned no id:", sim);

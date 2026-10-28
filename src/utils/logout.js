@@ -14,7 +14,7 @@ export async function logout(navigate) {
       body: JSON.stringify({ refresh }),
     });
   } catch {
-    // Ignore network errors: the user should still be logged out locally
+    
   } finally {
     localStorage.removeItem("token");
     localStorage.removeItem("refresh");

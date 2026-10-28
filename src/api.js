@@ -1,10 +1,9 @@
-// Flip USE_MOCK to false once the backend endpoints are ready.
-// Only this file changes: the components keep working as they are.
-const USE_MOCK = false; // set true to go back to mock data
+
+const USE_MOCK = false; 
 const BASE = import.meta.env.VITE_API_URL;
 
 const authHeaders = () => ({
-  Authorization: `Bearer ${localStorage.getItem("token")}`, // adjust to however you store the token
+  Authorization: `Bearer ${localStorage.getItem("token")}`, 
 });
 
 const MOCK_SUBMISSIONS = [
@@ -27,9 +26,7 @@ async function request(path) {
   return res.json();
 }
 
-// Real endpoint: GET /api/simulations/?page=&page_size=  (paginated: { count, results })
-// Maps a backend item to the shape the table expects. Several possible field names
-// are tried, so a small naming mismatch won't break the page.
+
 const toRow = (x) => ({
   id: x.id,
   user: x.user_name ?? x.user?.full_name ?? x.user?.name ?? x.user?.email ?? x.user ?? "—",
@@ -47,17 +44,17 @@ export async function getSubmissions({ page = 1, status = "" } = {}) {
     return { results, count: results.length };
   }
   const data = await request(`/api/simulations/?page=${page}&page_size=10`);
-  console.log("RAW simulations response:", data); // remove once everything displays correctly
+  console.log("RAW simulations response:", data);
   const list = Array.isArray(data) ? data : data.results ?? [];
   let results = list.map(toRow);
-  // Status filter is done here because the endpoint's status parameter is unknown
+  
   if (status) results = results.filter((r) => r.status.toLowerCase().replace(/_/g, " ") === status.toLowerCase());
   return { results, count: data.count ?? results.length };
 }
 
-// Expected response: { id, fullName, email, role, registeredAt, simulations: [...] }
+
 export async function getUserProfile(userId) {
-  if (true || USE_MOCK) { // still mock: no user-profile endpoint wired yet
+  if (true || USE_MOCK) { 
     await wait();
     return MOCK_USERS[userId] ?? MOCK_USERS[2];
   }

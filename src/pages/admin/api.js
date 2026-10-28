@@ -1,5 +1,4 @@
-// Flip USE_MOCK to false once the backend endpoints are ready.
-// Only this file changes: the components keep working as they are.
+
 const USE_MOCK = true;
 const BASE = import.meta.env.VITE_API_URL;
 
@@ -27,7 +26,7 @@ async function request(path) {
   return res.json();
 }
 
-// Expected response shape: { results: [...], count: number }
+
 export async function getSubmissions({ page = 1, status = "" } = {}) {
   if (USE_MOCK) {
     await wait();
@@ -38,7 +37,6 @@ export async function getSubmissions({ page = 1, status = "" } = {}) {
   return request(`/api/submissions/?${qs}`);
 }
 
-// Expected response: { id, fullName, email, role, registeredAt, simulations: [...] }
 export async function getUserProfile(userId) {
   if (USE_MOCK) {
     await wait();
