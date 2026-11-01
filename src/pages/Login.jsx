@@ -7,19 +7,15 @@ import { setSession, getCurrentUser, isAdmin, logout as clearSession } from "../
 const API_BASE = "https://project-finder-q5t2.onrender.com/api";
 const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
-
-const VERIFY_ADMIN = false;
-
 const inputBase =
   "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-[0.95rem] text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-600 focus:ring-[3px] focus:ring-blue-600/15 transition sm:text-base";
-const inputError =
-  "border-red-600 focus:border-red-600 focus:ring-red-600/15";
+const inputError = "border-red-600 focus:border-red-600 focus:ring-red-600/15";
 
 const Login = () => {
   const navigate = useNavigate();
 
-  const [view, setView] = useState("signin"); 
-  const [loginAs, setLoginAs] = useState("user"); // "user" | "admin"
+  const [view, setView] = useState("signin");
+  const [loginAs, setLoginAs] = useState("user");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState("");
@@ -100,12 +96,14 @@ const Login = () => {
         return;
       }
 
-      
       setSession(data);
 
-      if (isAdminTab && VERIFY_ADMIN && !isAdmin(getCurrentUser())) {
-        clearSession(); // don't keep a session for a non-admin account
-        setServerError("This account is not an admin account.");
+      const currentUser = getCurrentUser();
+      const userIsAdmin = isAdmin(currentUser);
+
+      if (isAdminTab && !userIsAdmin) {
+        clearSession();
+        setServerError("This account does not have admin privileges.");
         return;
       }
 
@@ -154,7 +152,6 @@ const Login = () => {
 
   return (
     <div className="mx-auto my-32 w-full max-w-[400px] rounded-xl bg-white px-7 py-8 text-center shadow-[0_2px_12px_rgba(15,31,61,0.08)] max-[480px]:px-5 max-[480px]:py-6">
-      {/* Logo / heading */}
       <div className="flex items-center justify-center gap-2">
         <img src={LogoImage} alt="Logo" className="h-auto w-7" />
         <h1 className="text-[22px] font-semibold tracking-wide text-[#17324D] max-[480px]:text-lg">
@@ -162,10 +159,8 @@ const Login = () => {
         </h1>
       </div>
 
-      
       {view === "signin" && (
         <>
-          {/* User / Admin toggle */}
           <div
             role="tablist"
             aria-label="Log in as"
@@ -241,7 +236,6 @@ const Login = () => {
               </p>
             )}
 
-            
             {!isAdminTab && (
               <div className="mb-3 flex justify-end">
                 <span
@@ -270,7 +264,6 @@ const Login = () => {
             </button>
           </form>
 
-          
           {!isAdminTab && (
             <p className="p-2 text-sm text-slate-600">
               Don't have an account?{" "}
@@ -282,7 +275,6 @@ const Login = () => {
         </>
       )}
 
-      
       {view === "forgot" && (
         <>
           <h3 className="my-5 mb-6 text-[1.4rem] text-slate-500 max-[480px]:my-4 max-[480px]:mb-5 max-[480px]:text-xl">
@@ -326,13 +318,12 @@ const Login = () => {
               onClick={() => setView("signin")}
               className="mt-4 inline-block self-start text-sm text-slate-700 hover:text-slate-900 hover:underline"
             >
-              ← Back to sign in
+              Back to sign in
             </button>
           </form>
         </>
       )}
 
-      
       {view === "forgot-sent" && (
         <>
           <h3 className="my-5 mb-6 text-[1.4rem] text-slate-500 max-[480px]:my-4 max-[480px]:mb-5 max-[480px]:text-xl">
@@ -347,7 +338,7 @@ const Login = () => {
             onClick={() => setView("signin")}
             className="mt-2 inline-block self-start text-sm text-slate-700 hover:text-slate-900 hover:underline"
           >
-            ← Back to sign in
+            Back to sign in
           </button>
         </>
       )}

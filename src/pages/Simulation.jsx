@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useParams, Link } from "react-router";
-import { FiUploadCloud, FiFileText, FiArrowLeft } from "react-icons/fi";
+import { FiUploadCloud, FiFileText, FiArrowLeft, FiCheck } from "react-icons/fi";
 import ConfirmModal from "../components/user/ConfirmModal";
 import FileMenu from "../components/user/FileMenu";
 import { getSimulation, getProject, submitSimulation } from "../../src/utils/simulation";
@@ -13,6 +13,7 @@ const getTimeLeft = (end) => {
   return {
     days: Math.floor(diff / 86400000),
     hours: Math.floor((diff % 86400000) / 3600000),
+    minutes: Math.floor((diff % 3600000) / 60000),
   };
 };
 
@@ -23,15 +24,15 @@ const toProject = (p = {}) => ({
   ...p,
   title: p.title ?? p.name ?? "Untitled project",
   industry: label(p.industry),
-  difficulty: label(p.difficulty ?? p.level),
+  difficulty: label(p.difficulty_level ?? p.difficulty ?? p.level),
   validity: p.validity,
   validityDays: p.validityDays ?? p.validity_days ?? 90,
-  scenario: p.scenario,
-  businessProblem: p.businessProblem ?? p.business_problem,
+  scenario: p.scenario_description ?? p.scenario,
+  businessProblem: p.business_problem ?? p.businessProblem,
   objective: p.objective ?? p.objectives,
   stakeholders: p.stakeholders,
   context: p.context,
-  role: p.role,
+  role: p.professional_role ?? p.role,
   tasks: p.tasks,
   deliverables: p.deliverables ?? p.required_deliverables,
 });
@@ -44,7 +45,7 @@ const Section = ({ title, children }) => (
 );
 
 const Simulation = () => {
-  const { id } = useParams(); // the simulation's id
+  const { id } = useParams();
 
   const [project, setProject] = useState(null);
   const [startedAt, setStartedAt] = useState(null);
@@ -54,15 +55,15 @@ const Simulation = () => {
   const [files, setFiles] = useState([]);
   const [uploadError, setUploadError] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [submittedDate, setSubmittedDate] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [confirmSubmit, setConfirmSubmit] = useState(false);
   const [timeLeft, setTimeLeft] = useState(null);
 
   const inputRef = useRef(null);
-  const replaceIndex = useRef(null); // null = adding, number = replacing that file
+  const replaceIndex = useRef(null);
 
-  
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -70,7 +71,7 @@ const Simulation = () => {
       setLoadError("");
       try {
         const sim = await getSimulation(id);
-        console.log("RAW simulation response:", sim); 
+        console.log("RAW simulation response:", sim);
 
         let p = sim.project ?? sim.project_detail;
         if (p && typeof p !== "object") p = await getProject(p);
@@ -78,7 +79,25 @@ const Simulation = () => {
 
         if (cancelled) return;
         setProject(toProject(p));
-        setSubmitted(String(sim.status ?? "").toLowerCase().includes("submit"));
+
+        const isSubmitted = String(sim.status ?? "").toLowerCase().includes("submit");
+        setSubmitted(isSubmitted);
+        
+        if (isSubmitted) {
+          const dateStr = sim.submitted_at ?? sim.updated_at ?? sim.created_at;
+          setSubmittedDate(
+            dateStr
+              ? new Date(dateStr).toLocaleString("en-GB", {
+                  day: "numeric", month: "short", year: "numeric",
+                  hour: "2-digit", minute: "2-digit"
+                })
+              : ""
+          );
+          if (Array.isArray(sim.files) || Array.isArray(sim.uploads)) {
+            setFiles(sim.files ?? sim.uploads);
+          }
+        }
+
         const start = Date.parse(sim.started_at ?? sim.created_at ?? sim.created ?? "");
         setStartedAt(Number.isNaN(start) ? null : start);
       } catch (e) {
@@ -87,20 +106,17 @@ const Simulation = () => {
         if (!cancelled) setLoading(false);
       }
     })();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [id]);
 
- 
   useEffect(() => {
-    if (!project || !startedAt) return;
+    if (!project || !startedAt || submitted) return;
     const end = startedAt + (project.validityDays || 90) * 86400000;
     const update = () => setTimeLeft(getTimeLeft(end));
     update();
     const timer = setInterval(update, 60000);
     return () => clearInterval(timer);
-  }, [project, startedAt]);
+  }, [project, startedAt, submitted]);
 
   const openPicker = (index = null) => {
     replaceIndex.current = index;
@@ -108,14 +124,23 @@ const Simulation = () => {
   };
 
   const handleFiles = (e) => {
+    const selectedFiles = Array.from(e.target.files);
+    if (selectedFiles.length === 0) return;
+
     const valid = [];
     let err = "";
-    Array.from(e.target.files).forEach((f) => {
+
+    selectedFiles.forEach((f) => {
       const ext = "." + f.name.split(".").pop().toLowerCase();
-      if (!ALLOWED.includes(ext)) err = `${f.name}: only PDF, DOCX or XLSX files are allowed`;
-      else if (f.size > MAX_SIZE) err = `${f.name} is larger than 10MB`;
-      else valid.push(f);
+      if (!ALLOWED.includes(ext)) {
+        err = `${f.name}: only PDF, DOCX or XLSX files are allowed`;
+      } else if (f.size > MAX_SIZE) {
+        err = `${f.name} is larger than 10MB`;
+      } else {
+        valid.push(f);
+      }
     });
+
     setUploadError(err);
 
     if (valid.length > 0) {
@@ -126,12 +151,12 @@ const Simulation = () => {
         setFiles((prev) => [...prev, ...valid]);
       }
     }
+    
     replaceIndex.current = null;
-    e.target.value = ""; // lets you pick the same file again later
+    e.target.value = ""; // Reset input
   };
 
-  const removeFile = (index) =>
-    setFiles((prev) => prev.filter((_, i) => i !== index));
+  const removeFile = (index) => setFiles((prev) => prev.filter((_, i) => i !== index));
 
   const handleSubmitClick = () => {
     if (files.length === 0) return;
@@ -143,10 +168,23 @@ const Simulation = () => {
     setConfirmSubmit(false);
     setSubmitting(true);
     setSubmitError("");
+    
+    console.log("SUBMITTING FILES:", files); // Debug log
+
     try {
       await submitSimulation(id, files);
+      
+      console.log("SUBMISSION SUCCESSFUL");
+      
       setSubmitted(true);
+      setSubmittedDate(
+        new Date().toLocaleString("en-GB", {
+          day: "numeric", month: "short", year: "numeric",
+          hour: "2-digit", minute: "2-digit"
+        })
+      );
     } catch (e) {
+      console.error("UPLOAD ERROR:", e);
       setSubmitError(e.message || "Could not submit. Please try again.");
     } finally {
       setSubmitting(false);
@@ -161,43 +199,42 @@ const Simulation = () => {
     return (
       <div className="p-6">
         <p>{loadError ? `Couldn't load this simulation. ${loadError}` : "Simulation not found."}</p>
-        <Link to="/project-library" className="text-blue-600">
-          Back to library
-        </Link>
+        <Link to="/project-library" className="text-blue-600">Back to library</Link>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-3xl p-6">
+    <div className=" max-w-3xl p-8 pb-20">
+      
       <h1 className="text-2xl font-bold text-[#17324D]">{project.title}</h1>
-      <p className="mt-1 text-xs text-[#2563EB]">
+      <p className="mt-1 text-xs text-slate-500">
         {project.industry} · {project.difficulty}
       </p>
 
-      <span
-        className={`mt-3 inline-block rounded-full px-3 py-1 text-xs font-medium ${
-          submitted ? "bg-[#D9F5E3] text-[#15803D]" : "bg-blue-50 text-[#2563EB]"
-        }`}
-      >
-        {submitted ? "Submitted" : "In progress"}
-      </span>
-
-      {project.validity && (
-        <p className="mt-3 text-xs text-slate-500">Validity · {project.validity}</p>
-      )}
-
-      {timeLeft && !submitted && (
-        <div className="mt-2 rounded-md bg-[#D9F5E3] px-3 py-2 text-xs text-[#15803D]">
-          <p>Time Remaining</p>
-          <p className="font-bold">
-            {timeLeft.days} days {timeLeft.hours} hours Left
-          </p>
+      {submitted ? (
+        <div className="mt-4 rounded-lg bg-[#15803D] px-4 py-3 text-white">
+          <div className="flex items-center gap-2 text-sm font-semibold">
+            <span>Submitted</span>
+            <FiCheck />
+          </div>
+          {submittedDate && (
+            <p className="mt-1 text-xs text-green-100">Submitted {submittedDate}</p>
+          )}
         </div>
+      ) : (
+        timeLeft && (
+          <div className="mt-4 rounded-lg bg-[#15803D] px-4 py-3 text-white">
+            <p className="text-sm font-semibold">Time Remaining</p>
+            <p className="mt-0.5 text-xs">
+              {timeLeft.days} days {timeLeft.hours} hours {timeLeft.minutes} minutes Left
+            </p>
+          </div>
+        )
       )}
 
       {project.scenario && <Section title="Scenario">{project.scenario}</Section>}
-
+      
       {project.businessProblem && (
         <Section title="Business Problem">
           <p className="italic">{project.businessProblem}</p>
@@ -210,7 +247,7 @@ const Simulation = () => {
         </Section>
       )}
 
-      {Array.isArray(project.stakeholders) && (
+      {Array.isArray(project.stakeholders) && project.stakeholders.length > 0 && (
         <Section title="Stakeholders / Team">
           <ul className="list-disc pl-5">
             {project.stakeholders.map((s, i) => (
@@ -221,10 +258,9 @@ const Simulation = () => {
       )}
 
       {project.context && <Section title="Context">{project.context}</Section>}
-
       {project.role && <Section title="Role">{label(project.role)}</Section>}
 
-      {Array.isArray(project.tasks) && (
+      {Array.isArray(project.tasks) && project.tasks.length > 0 && (
         <Section title="Tasks">
           <ol className="list-decimal pl-5">
             {project.tasks.map((t, i) => (
@@ -234,7 +270,7 @@ const Simulation = () => {
         </Section>
       )}
 
-      {Array.isArray(project.deliverables) && (
+      {Array.isArray(project.deliverables) && project.deliverables.length > 0 && (
         <Section title="Required Deliverables">
           <ul className="list-disc pl-5">
             {project.deliverables.map((d, i) => (
@@ -244,7 +280,6 @@ const Simulation = () => {
         </Section>
       )}
 
-      {/* documents */}
       <Section title="Documents">
         <input
           ref={inputRef}
@@ -269,56 +304,52 @@ const Simulation = () => {
 
         {uploadError && <p className="mt-2 text-xs text-red-600">{uploadError}</p>}
 
-        {files.length === 0 && submitted && (
-          <p className="text-xs text-slate-400">No documents.</p>
-        )}
-
         <ul className="mt-3 space-y-2">
           {files.map((f, i) => (
             <li
-              key={f.name + i}
-              className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
+              key={(f.name || f.id || "") + i}
+              className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2"
             >
               <span className="flex min-w-0 items-center gap-2">
                 <FiFileText className="shrink-0 text-slate-500" />
-                <span className="truncate text-xs">{f.name}</span>
+                <span className="truncate text-xs">{f.name || f.file?.split("/").pop() || f.filename || "Document"}</span>
               </span>
-              <FileMenu
-                file={f}
-                submitted={submitted}
-                onReplace={() => openPicker(i)}
-                onDelete={() => removeFile(i)}
-              />
+              {!submitted && (
+                <FileMenu
+                  file={f}
+                  submitted={submitted}
+                  onReplace={() => openPicker(i)}
+                  onDelete={() => removeFile(i)}
+                />
+              )}
             </li>
           ))}
         </ul>
       </Section>
 
-      //submit
-      <Section title="Submit Simulation">
-        <button
-          type="button"
-          onClick={handleSubmitClick}
-          disabled={files.length === 0 || submitted || submitting}
-          className="rounded-md bg-[#2563EB] px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {submitted ? "Submitted" : submitting ? "Submitting…" : "Submit Simulation"}
-        </button>
+      {!submitted && (
+        <Section title="Submit Simulation">
+          <button
+            type="button"
+            onClick={handleSubmitClick}
+            disabled={files.length === 0 || submitting}
+            className="rounded-md bg-[#2563EB] px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {submitting ? "Submitting…" : "Submit Simulation"}
+          </button>
 
-        {files.length === 0 && !submitted && (
-          <p className="mt-2 text-xs text-slate-400">Upload at least one document to submit.</p>
-        )}
-        {submitError && <p className="mt-2 text-xs text-red-600">{submitError}</p>}
-        {submitted && (
-          <p className="mt-2 text-xs text-[#15803D]">
-            Your simulation has been submitted.
-          </p>
-        )}
-      </Section>
+          {files.length === 0 && (
+            <p className="mt-2 text-xs text-slate-400">
+              Upload at least one document to submit.
+            </p>
+          )}
+          {submitError && <p className="mt-2 text-xs text-red-600">{submitError}</p>}
+        </Section>
+      )}
 
       <Link
         to="/project-library"
-        className="mt-8 inline-flex items-center gap-2 text-xs text-[#2563EB] hover:underline"
+        className="mt-8 inline-flex items-center gap-2 text-sm text-[#2563EB] hover:underline"
       >
         <FiArrowLeft /> Back to Project Library
       </Link>

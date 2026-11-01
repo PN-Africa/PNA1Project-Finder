@@ -10,20 +10,23 @@ const selectStyle =
 const pageBtn =
   "rounded-lg border border-[#CBD5E1] bg-white px-3 py-1.5 text-sm text-[#475569] hover:bg-[#F1F5F9] disabled:cursor-not-allowed disabled:opacity-40";
 
-// If the backend sends an object (e.g. industry: { id, name }), pull out a readable string
 const label = (v) =>
   v == null ? "" : typeof v === "object" ? v.name ?? v.title ?? v.label ?? "" : String(v);
 
-// Keeps every backend field (...x) and adds the names the old mock data used,
-// so ProjectCard keeps working. Several possible backend names are tried.
-const toProject = (x) => ({
-  ...x,
-  id: x.id,
-  title: x.title ?? x.name ?? x.project_title ?? "Untitled project",
-  description: x.description ?? x.summary ?? "",
-  industry: label(x.industry),
-  difficulty: label(x.difficulty ?? x.level),
-});
+const norm = (s) => String(s || "").toLowerCase().trim().replace(/[\s-]/g, "");
+
+const toProject = (x) => {
+  if (!x) return null; // Safety check
+  return {
+    ...x,
+    id: x.id,
+    title: x.title ?? x.name ?? x.project_title ?? "Untitled project",
+    description: x.description ?? x.summary ?? x.scenario_description ?? "",
+    industry: label(x.industry),
+    difficulty: label(x.difficulty_level ?? x.difficulty ?? x.level),
+    is_published: x.is_published === true, 
+  };
+};
 
 const ProjectLibary = () => {
   const [projects, setProjects] = useState([]);
@@ -41,14 +44,17 @@ const ProjectLibary = () => {
       setLoading(true);
       setError("");
       try {
-        const res = await fetch(`${API_BASE}/projects/available/?page_size=100`, {
+        const res = await fetch(`${API_BASE}/projects/?page_size=100`, {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         });
         if (!res.ok) throw new Error(`Request failed (${res.status})`);
         const data = await res.json();
-        console.log("RAW projects response:", data); // remove once everything displays correctly
         const list = Array.isArray(data) ? data : data.results ?? [];
-        if (!cancelled) setProjects(list.map(toProject));
+        
+        
+        const safeList = list.filter(Boolean); 
+        
+        if (!cancelled) setProjects(safeList.map(toProject).filter(Boolean));
       } catch (e) {
         if (!cancelled) setError(e.message || "Something went wrong");
       } finally {
@@ -63,8 +69,9 @@ const ProjectLibary = () => {
   }, []);
 
   const filteredProjects = projects.filter((p) => {
-    const matchIndustry = industry === "" || p.industry === industry;
-    const matchDifficulty = difficulty === "" || p.difficulty === difficulty;
+    if (!p) return false;
+    const matchIndustry = industry === "" || norm(p.industry) === norm(industry);
+    const matchDifficulty = difficulty === "" || norm(p.difficulty) === norm(difficulty);
     return matchIndustry && matchDifficulty;
   });
 
@@ -88,12 +95,12 @@ const ProjectLibary = () => {
             }}
           >
             <option value="">Industry</option>
-            <option value="Technology">Technology</option>
-            <option value="Healthcare">Healthcare</option>
-            <option value="FinTech">FinTech</option>
-            <option value="E-commerce">E-Commerce</option>
-            <option value="Real Estate">Real Estate</option>
-            <option value="EdTech">EdTech</option>
+            <option value="technology">Technology</option>
+            <option value="healthcare">Healthcare</option>
+            <option value="fintech">FinTech</option>
+            <option value="ecommerce">E-Commerce</option>
+            <option value="realestate">Real Estate</option>
+            <option value="edtech">EdTech</option>
           </select>
 
           <select
@@ -105,9 +112,9 @@ const ProjectLibary = () => {
             }}
           >
             <option value="">Difficulty</option>
-            <option value="Beginner">Beginner</option>
-            <option value="Intermediate">Intermediate</option>
-            <option value="Advanced">Advanced</option>
+            <option value="beginner">Beginner</option>
+            <option value="intermediate">Intermediate</option>
+            <option value="advanced">Advanced</option>
           </select>
         </div>
       </div>
@@ -126,7 +133,7 @@ const ProjectLibary = () => {
       {!loading &&
         !error &&
         currentProjects.map((project) => (
-          <ProjectCard key={project.id} project={project} className="p-4" />
+          project ? <ProjectCard key={project.id} project={project} className="p-4" /> : null
         ))}
 
       {totalPages > 1 && (

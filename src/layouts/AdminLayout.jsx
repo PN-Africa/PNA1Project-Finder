@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router";
 import {
   MdOutlineDashboard,
@@ -7,10 +7,11 @@ import {
   MdOutlineViewKanban,
   MdOutlinePersonOutline,
   MdLogout,
+  MdOutlineKeyboardArrowUp,
 } from "react-icons/md";
 import { AdminDataProvider } from "../context/AdminDataContext";
 import ConfirmModal from "../components/user/ConfirmModal";
-import { logout } from "../utils/auth";
+import { logout, getCurrentUser } from "../utils/auth";
 import LogoImage from "../assets/logo.jpg";
 
 const mainLinks = [
@@ -29,12 +30,34 @@ const linkClass = ({ isActive }) =>
 const AdminLayout = () => {
   const navigate = useNavigate();
   const [confirmLogout, setConfirmLogout] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  
+  useEffect(() => {
+    const handleClick = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
   const handleLogout = () => {
-    logout(); // clears token, refresh token and saved user
+    logout();
     setConfirmLogout(false);
+    setMenuOpen(false);
     navigate("/login", { replace: true });
   };
+
+  const handleLoginAsUser = () => {
+    setMenuOpen(false);
+    navigate("/project-library");
+  };
+
+  const user = getCurrentUser();
+  const adminName = user?.first_name || user?.full_name || user?.username || "Admin";
 
   return (
     <div className="flex min-h-screen flex-col bg-[#eef3f0] text-gray-800 md:flex-row">
@@ -58,14 +81,47 @@ const AdminLayout = () => {
             <MdOutlinePersonOutline size={20} />
             <span>Profile</span>
           </NavLink>
-          <button
-            type="button"
-            onClick={() => setConfirmLogout(true)}
-            className={`${baseLink} cursor-pointer text-white hover:bg-white/10`}
-          >
-            <MdLogout size={20} />
-            <span>Log Out</span>
-          </button>
+
+          {/* ⬇️ DROPDOWN MENU ⬇️ */}
+          <div className="relative" ref={menuRef}>
+            <button
+              type="button"
+              onClick={() => setMenuOpen(!menuOpen)}
+              className={`${baseLink} cursor-pointer text-white hover:bg-white/10 justify-between`}
+            >
+              <div className="flex items-center gap-3">
+                <MdOutlinePersonOutline size={20} />
+                <span>Account</span>
+              </div>
+              <MdOutlineKeyboardArrowUp
+                size={20}
+                className={`transition-transform duration-200 ${menuOpen ? "rotate-180" : ""}`}
+              />
+            </button>
+
+            {menuOpen && (
+              <div className="absolute bottom-full left-0 mb-2 w-full rounded-lg border border-slate-700 bg-[#1a345c] py-1 shadow-xl">
+                <button
+                  onClick={handleLoginAsUser}
+                  className="flex w-full items-center gap-3 px-4 py-2 text-sm text-white hover:bg-white/10"
+                >
+                  <MdOutlinePersonOutline size={18} />
+                  Log in as User
+                </button>
+                <div className="my-1 h-px w-full bg-white/10" />
+                <button
+                  onClick={() => {
+                    setConfirmLogout(true);
+                    setMenuOpen(false);
+                  }}
+                  className="flex w-full items-center gap-3 px-4 py-2 text-sm text-red-300 hover:bg-white/10 hover:text-red-200"
+                >
+                  <MdLogout size={18} />
+                  Log Out
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </aside>
 

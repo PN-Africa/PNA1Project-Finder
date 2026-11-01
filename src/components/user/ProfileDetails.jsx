@@ -1,22 +1,50 @@
-import React from "react";
-import { getProfile, formatDate } from "../../utils/profile";
-
-const Field = ({ label, value }) => (
-  <div className="m-2 p-5 first:mt-0">
-    <p className="text-sm font-semibold text-[#17324D]">{label}</p>
-    <p className="mt-1 text-sm text-slate-500">{value}</p>
-  </div>
-);
+import React, { useEffect, useState } from "react";
+import { fetchProfile, formatDate } from "../../utils/profile";
 
 const ProfileDetails = () => {
-  const profile = getProfile();
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await fetchProfile();
+        if (!cancelled) setProfile(data);
+      } catch (e) {
+        if (!cancelled) setError(e.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  if (loading) return <p className="text-sm text-slate-500">Loading profile…</p>;
+  if (error) return <p className="text-sm text-red-600">{error}</p>;
+  if (!profile) return null;
 
   return (
-    <div className="p-5 m-2">
-      <Field label="Full Name" value={profile.fullName} />
-      <Field label="Email" value={profile.email} />
-      <Field label="Professional Role" value={profile.role} />
-      <Field label="Registration Date" value={formatDate(profile.registrationDate)} />
+    <div className="rounded-lg bg-white p-7">
+      <div>
+        <p className="text-xs uppercase tracking-wide text-slate-400">Full Name</p>
+        <p className="mt-1 text-base font-medium text-[#17324D]">{profile.fullName || "—"}</p>
+      </div>
+      <div>
+        <p className="text-xs uppercase tracking-wide text-slate-400">Email</p>
+        <p className="mt-1 text-base font-medium text-[#17324D]">{profile.email || "—"}</p>
+      </div>
+      <div>
+        <p className="text-xs uppercase tracking-wide text-slate-400">Professional Role</p>
+        <p className="mt-1 text-base font-medium text-[#17324D]">{profile.role || "—"}</p>
+      </div>
+      <div>
+        <p className="text-xs uppercase tracking-wide text-slate-400">Registration Date</p>
+        <p className="mt-1 text-base font-medium text-[#17324D]">
+          {formatDate(profile.registrationDate)}
+        </p>
+      </div>
     </div>
   );
 };

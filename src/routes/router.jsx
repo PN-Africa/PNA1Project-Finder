@@ -16,7 +16,10 @@ import Submissions, { UserProfilePage } from "../pages/admin/Submissions";
 import Simulationprojects from "../pages/admin/Simulationprojects";
 import AdminProfile from "../pages/admin/Profile";
 import { ProtectedRoute, GuestRoute } from "../components/common/ProtectedRoute";
-
+import ProjectForm from "../pages/admin/ProjectForm";
+import MySimulations from "../pages/MySimulations";
+import ResetPassword from "../pages/ResetPassword";
+import VerifyEmail from "../pages/VerifyEmail";
 const router = createBrowserRouter([
   { path: "/", element: <Navigate to="/login" replace /> },
 
@@ -28,6 +31,8 @@ const router = createBrowserRouter([
         children: [
           { path: "/login", element: <Login /> },
           { path: "/signup", element: <SignUp /> },
+          { path: "/reset-password", element: <ResetPassword /> },
+          { path: "/verify-email", element: <VerifyEmail /> },
         ],
       },
     ],
@@ -47,6 +52,8 @@ const router = createBrowserRouter([
           { path: "/edit-profile", element: <EditProfile /> },
           { path: "/edited-profile", element: <EditedProfile /> },
           { path: "/profile", element: <Profile /> },
+          { path: "/my-simulations", element: <MySimulations /> },
+
         ],
       },
     ],
@@ -65,6 +72,9 @@ const router = createBrowserRouter([
           { path: "submissions", element: <Submissions /> },
           { path: "simulation-projects", element: <Simulationprojects /> },
           { path: "profile", element: <AdminProfile /> },
+          { path: "simulation-projects", element: <Simulationprojects /> },
+{ path: "simulation-projects/new", element: <ProjectForm /> },
+{ path: "simulation-projects/:id/edit", element: <ProjectForm /> },
         ],
       },
     ],

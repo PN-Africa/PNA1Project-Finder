@@ -34,11 +34,11 @@ const ProfileMenu = ({ onNavigate }) => {
     try {
       localStorage.removeItem("currentUser");
     } catch {
-      /* ignore */
+      
     }
     setConfirmLogout(false);
     closeAll();
-    logout(navigate); // calls the API, clears the tokens, then goes to /login
+    logout(navigate); 
   };
 
   const itemClass = "block w-full px-4 py-2 text-left text-xs text-slate-700 hover:bg-slate-50";

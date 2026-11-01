@@ -111,7 +111,7 @@ const Profile = () => {
       )}
 
       <div className="rounded-2xl bg-white p-6 md:p-8">
-        {/* Avatar + name */}
+      
         <div className="mb-6 flex items-center gap-4">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#12294d] text-2xl font-bold text-white">
             {initials}

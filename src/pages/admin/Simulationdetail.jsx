@@ -6,10 +6,6 @@ const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem("toke
 const label = (v) =>
   v == null ? "" : typeof v === "object" ? v.name ?? v.title ?? v.label ?? "" : String(v);
 
-const inputClass =
-  "w-full rounded-md border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-700 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
-
-
 const pick = (obj, ...keys) => {
   for (const k of keys) if (obj?.[k] != null && obj[k] !== "") return obj[k];
   return "";
@@ -25,7 +21,7 @@ function Block({ title, children }) {
   );
 }
 
-export default function SimulationDetail({ id, onBack }) {
+export default function Simulationdetail({ id, onBack }) {
   const [sim, setSim] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -34,7 +30,7 @@ export default function SimulationDetail({ id, onBack }) {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`${API_BASE}/simulations/${id}/`, { headers: authHeaders() });
+      const res = await fetch(`${API_BASE}/projects/${id}/`, { headers: authHeaders() });
       if (!res.ok) throw new Error(`Request failed (${res.status})`);
       setSim(await res.json());
     } catch (e) {
@@ -72,7 +68,7 @@ export default function SimulationDetail({ id, onBack }) {
             <header>
               <h1 className="text-xl font-medium">{pick(sim, "title", "name") || "Untitled project"}</h1>
               <div className="mt-3 flex flex-wrap gap-2">
-                {[label(sim.industry), label(sim.difficulty ?? sim.level), label(sim.status)]
+                {[label(sim.industry), label(sim.difficulty_level ?? sim.difficulty), label(sim.status)]
                   .filter(Boolean)
                   .map((t) => (
                     <span
@@ -83,18 +79,15 @@ export default function SimulationDetail({ id, onBack }) {
                     </span>
                   ))}
               </div>
-              {pick(sim, "company_name", "company") && (
-                <p className="mt-3 text-sm text-slate-500">{pick(sim, "company_name", "company")}</p>
-              )}
             </header>
 
-            <Block title="Scenario">{pick(sim, "scenario_description", "scenario", "description")}</Block>
+            <Block title="Scenario">{pick(sim, "scenario_description", "scenario")}</Block>
             <Block title="Business problem">{pick(sim, "business_problem")}</Block>
-            <Block title="Objective">{pick(sim, "objective", "project_objective")}</Block>
+            <Block title="Objective">{pick(sim, "objective")}</Block>
             <Block title="Stakeholders / team">{label(pick(sim, "stakeholders", "team"))}</Block>
             <Block title="Your role">{label(pick(sim, "professional_role", "role"))}</Block>
             <Block title="Tasks">{pick(sim, "tasks")}</Block>
-            <Block title="Required deliverables">{pick(sim, "deliverables", "required_deliverables")}</Block>
+            <Block title="Required deliverables">{pick(sim, "deliverables")}</Block>
 
             {pick(sim, "brief", "brief_url", "project_brief") && (
               <a
@@ -106,7 +99,6 @@ export default function SimulationDetail({ id, onBack }) {
                 Download project brief
               </a>
             )}
-
           </div>
         )}
       </div>

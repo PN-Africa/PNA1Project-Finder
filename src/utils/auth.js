@@ -13,9 +13,10 @@ const decodeToken = (token) => {
 
 export const getToken = () => {
   try {
-    return localStorage.getItem(TOKEN_KEY);
+   
+    return localStorage.getItem(TOKEN_KEY) || localStorage.getItem("access") || "";
   } catch {
-    return null;
+    return "";
   }
 };
 
@@ -27,7 +28,6 @@ export const isTokenValid = (token) => {
 };
 
 export const isLoggedIn = () => isTokenValid(getToken());
-
 
 export const setSession = (data) => {
   try {
@@ -46,7 +46,6 @@ export const getCurrentUser = () => {
   } catch {
     
   }
-  
   return decodeToken(getToken() || "");
 };
 

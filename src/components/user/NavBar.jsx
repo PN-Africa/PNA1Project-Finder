@@ -6,7 +6,7 @@ import ProfileMenu from "./ProfileMenu";
 
 const links = [
   { to: "/project-library", label: "Project Library" },
-  { to: "/simulation", label: "My Simulations" },
+  { to: "/my-simulations", label: "My Simulations" }, 
 ];
 
 const linkClass =

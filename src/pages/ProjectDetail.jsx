@@ -10,10 +10,9 @@ const toProject = (p = {}) => ({
   title: p.title ?? p.name ?? "Untitled project",
   description: p.description ?? p.summary ?? "",
   industry: label(p.industry),
-  difficulty: label(p.difficulty ?? p.level),
-  status: p.status ?? "Available",
-  validity: p.validity,
-  scenario: p.scenario,
+  difficulty: label(p.difficulty_level ?? p.difficulty ?? p.level),
+  validity: p.duration_in_days ? `${p.duration_in_days} days` : p.validity,
+  scenario: p.scenario_description ?? p.scenario,
   objective: p.objective ?? p.objectives,
   tasks: p.tasks,
   deliverables: p.deliverables ?? p.required_deliverables,
@@ -57,12 +56,10 @@ const ProjectDetail = () => {
       const projectId = project.id ?? id;
       const sim = await startSimulation(projectId);
 
-      
       const simId = sim?.id ?? sim?.simulation_id ?? sim?.pk;
       if (!simId) {
-        console.error("startSimulation returned no id:", sim);
         setStartError(
-          "Simulation was created but the backend didn't return an id. Check the API response."
+          "Simulation was created but the backend didn't return an id."
         );
         return;
       }
@@ -70,12 +67,8 @@ const ProjectDetail = () => {
       navigate(`/simulation/${simId}`);
     } catch (e) {
       // Common case: user already started this project.
-      // Backend often returns 400 with a message like "already exists" or
-      // "Simulation for this project already exists". In that case, we try
-      // to fetch the existing simulation and navigate to it instead.
       const msg = e.message || "";
-      const looksLikeDuplicate =
-        /already|exists|duplicate/i.test(msg);
+      const looksLikeDuplicate = /already|exists|duplicate/i.test(msg);
 
       if (looksLikeDuplicate) {
         try {
@@ -129,27 +122,19 @@ const ProjectDetail = () => {
     );
   }
 
-  const available = String(project.status).toLowerCase() === "available";
-
   return (
-    <div className="m-1 max-w-3xl p-5">
+    <div className="m-6 max-w-3xl pb-20">
       <h1 className="text-2xl font-bold text-[#17324D]">{project.title}</h1>
 
       <div className="mt-3 flex flex-wrap gap-2 text-sm">
         <span className="rounded-full bg-slate-100 px-3 py-1">
-          {project.industry}
+          {project.industry || "General"}
         </span>
         <span className="rounded-full bg-slate-100 px-3 py-1">
-          {project.difficulty}
+          {project.difficulty || "All Levels"}
         </span>
-        <span
-          className={`rounded-full px-3 py-1 ${
-            available
-              ? "bg-[#D9F5E3] text-[#15803D]"
-              : "bg-slate-200 text-slate-500"
-          }`}
-        >
-          {project.status}
+        <span className="rounded-full bg-[#D9F5E3] px-3 py-1 text-[#15803D]">
+          Available
         </span>
         {project.validity && (
           <span className="rounded-full bg-slate-100 px-3 py-1">
@@ -170,7 +155,7 @@ const ProjectDetail = () => {
         </>
       )}
 
-      {Array.isArray(project.tasks) && (
+      {Array.isArray(project.tasks) && project.tasks.length > 0 && (
         <>
           <h2 className="mt-6 font-semibold text-[#17324D]">
             What you will do
@@ -183,7 +168,7 @@ const ProjectDetail = () => {
         </>
       )}
 
-      {Array.isArray(project.deliverables) && (
+      {Array.isArray(project.deliverables) && project.deliverables.length > 0 && (
         <>
           <h2 className="mt-6 font-semibold text-[#17324D]">Deliverables</h2>
           <ul className="mt-1 list-disc pl-5 text-slate-600">
@@ -195,20 +180,14 @@ const ProjectDetail = () => {
       )}
 
       <div className="mt-10 flex flex-col items-start gap-4">
-        {available ? (
-          <button
-            type="button"
-            onClick={handleStart}
-            disabled={starting}
-            className="rounded-lg bg-[#2563EB] px-6 py-2.5 font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {starting ? "Starting…" : "Start"}
-          </button>
-        ) : (
-          <span className="rounded-lg bg-slate-200 px-6 py-2.5 font-semibold text-slate-500">
-            Unavailable
-          </span>
-        )}
+        <button
+          type="button"
+          onClick={handleStart}
+          disabled={starting}
+          className="rounded-lg bg-[#2563EB] px-6 py-2.5 font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {starting ? "Starting…" : "Start Simulation"}
+        </button>
 
         {startError && (
           <p className="max-w-xl rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -216,10 +195,7 @@ const ProjectDetail = () => {
           </p>
         )}
 
-        <Link
-          to="/project-library"
-          className="text-blue-600 hover:underline"
-        >
+        <Link to="/project-library" className="text-blue-600 hover:underline">
           &larr; Back to library
         </Link>
       </div>

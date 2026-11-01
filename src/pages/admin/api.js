@@ -3,7 +3,7 @@ const USE_MOCK = true;
 const BASE = import.meta.env.VITE_API_URL;
 
 const authHeaders = () => ({
-  Authorization: `Bearer ${localStorage.getItem("token")}`, // adjust to however you store the token
+  Authorization: `Bearer ${localStorage.getItem("token")}`, 
 });
 
 const MOCK_SUBMISSIONS = [

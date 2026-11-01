@@ -34,7 +34,7 @@ Backend:
 ### Installation
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/project_finder.git
+git clone https://github.com/PN-Africa/PNA1Project-Finder
 cd project_finder
 npm install
 

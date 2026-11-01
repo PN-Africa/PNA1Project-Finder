@@ -1,20 +1,11 @@
 // src/utils/simulation.js
 const API_BASE = "https://project-finder-q5t2.onrender.com/api";
 
-const getToken = () =>
-  localStorage.getItem("token") || localStorage.getItem("access") || "";
+const getToken = () => localStorage.getItem("token") || localStorage.getItem("access") || "";
 
 const authHeaders = () => ({
   Authorization: `Bearer ${getToken()}`,
 });
-
-
-const normalizeId = (v) => {
-  if (v == null) return v;
-  const n = Number(v);
-  return Number.isFinite(n) && String(n) === String(v).trim() ? n : v;
-};
-
 
 async function readError(res) {
   let data = null;
@@ -31,7 +22,6 @@ async function readError(res) {
   return `Request failed (${res.status})`;
 }
 
-
 const unwrapSimulation = (raw) => {
   if (!raw || typeof raw !== "object") return raw;
   if (raw.simulation && typeof raw.simulation === "object") return raw.simulation;
@@ -40,33 +30,6 @@ const unwrapSimulation = (raw) => {
   }
   return raw;
 };
-
-
-export async function startSimulation(projectId) {
-  const id = normalizeId(projectId);
-
-  const payload = { project: id, project_id: id };
-
-  const res = await fetch(`${API_BASE}/simulations/`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: JSON.stringify(payload),
-  });
-
-  if (!res.ok) {
-    const msg = await readError(res);
-    console.error("startSimulation failed:", {
-      status: res.status,
-      sentPayload: payload,
-      errorMessage: msg,
-    });
-    throw new Error(msg);
-  }
-
-  const raw = await res.json();
-  console.log("startSimulation response:", raw); // remove later
-  return unwrapSimulation(raw);
-}
 
 export async function getSimulation(id) {
   const res = await fetch(`${API_BASE}/simulations/${id}/`, {
@@ -77,6 +40,19 @@ export async function getSimulation(id) {
   return unwrapSimulation(raw);
 }
 
+export async function startSimulation(projectId) {
+  const res = await fetch(`${API_BASE}/simulations/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({ project: projectId, project_id: projectId }),
+  });
+  if (!res.ok) {
+    const msg = await readError(res);
+    console.error("startSimulation failed:", msg);
+    throw new Error(msg);
+  }
+  return unwrapSimulation(await res.json());
+}
 
 export async function getProject(id) {
   const res = await fetch(`${API_BASE}/projects/${id}/`, {
@@ -86,17 +62,36 @@ export async function getProject(id) {
   return res.json();
 }
 
-
+// ⬇️ UPDATED: Uses /simulations/{id}/uploads/ to match the new backend
 export async function submitSimulation(id, files = []) {
   const body = new FormData();
-  files.forEach((f) => body.append("files", f));
+  
 
-  const res = await fetch(`${API_BASE}/simulations/${id}/submit/`, {
+  files.forEach((f) => {
+    body.append("file", f);
+    body.append("files", f);
+  });
+
+  const res = await fetch(`${API_BASE}/simulations/${id}/uploads/`, {
     method: "POST",
     headers: authHeaders(), 
     body,
   });
 
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) {
+    const errorMsg = await readError(res);
+    console.error("Upload failed:", errorMsg);
+    throw new Error(errorMsg);
+  }
+  
   return res.json().catch(() => ({}));
+}
+
+export async function getSimulations() {
+  const res = await fetch(`${API_BASE}/simulations/?page_size=100`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error(await readError(res));
+  const data = await res.json();
+  return Array.isArray(data) ? data : data.results ?? [];
 }

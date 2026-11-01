@@ -1,10 +1,10 @@
 import React from "react";
 import { Link } from "react-router";
 import ProfileDetails from "../components/user/ProfileDetails";
-
+import Profile from "./Profile";
 const EditedProfile = () => {
   return (
-    <div className="mx-auto max-w-3xl p-6">
+    <div className=" max-w-3xl p-7">
       <h1 className="text-2xl font-bold text-[#17324D]">My Profile</h1>
 
       <p

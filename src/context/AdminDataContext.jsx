@@ -4,11 +4,9 @@ import { isAdmin } from "../utils/auth";
 
 const AdminDataContext = createContext(null);
 
-
 const userIdOf = (s) => s.user?.id ?? s.user ?? s.user_id;
 const projectIdOf = (s) => s.project?.id ?? s.project ?? s.project_id;
 const isSubmitted = (s) => String(s.status || "").toLowerCase() === "submitted";
-
 
 export const AdminDataProvider = ({ children }) => {
   const [data, setData] = useState({
@@ -25,10 +23,11 @@ export const AdminDataProvider = ({ children }) => {
     setError("");
 
     const endpoints = {
-      users: "/auth/users/?page_size=100",    
-      submissions: "/simulations/?page_size=100",
-      projects: "/projects/?page_size=100",
+      users: "/admin/users/?page_size=100",
+      submissions: "/admin/simulations/?page_size=100",
+      projects: "/admin/projects/?page_size=100",
     };
+
     const keys = Object.keys(endpoints);
     const results = await Promise.allSettled(keys.map((k) => apiFetch(endpoints[k])));
 
@@ -46,9 +45,16 @@ export const AdminDataProvider = ({ children }) => {
         failed.push(`${key} (${r.reason?.message || "request failed"})`);
         return;
       }
+
       if (key === "users") {
-        const all = toList(r.value);
-        const people = all.filter((u) => !isAdmin(u));
+        const rawList = Array.isArray(r.value) ? r.value : r.value?.results ?? [];
+        
+        
+        console.log("🔍 RAW USERS FROM API:", rawList);
+        
+        const people = rawList.filter((u) => !isAdmin(u));
+        console.log("✅ FILTERED USERS (non-admins):", people.length);
+        
         next.users = people;
         next.counts.users = people.length;
       } else {
@@ -56,19 +62,6 @@ export const AdminDataProvider = ({ children }) => {
         next.counts[key] = toCount(r.value);
       }
     });
-
-    // No users endpoint: build the list from users embedded in submissions
-    if (failed.some((f) => f.startsWith("users"))) {
-      const seen = new Map();
-      next.submissions.forEach((s) => {
-        const u = s.user;
-        if (u && typeof u === "object" && u.id != null && !isAdmin(u)) seen.set(u.id, u);
-      });
-      if (seen.size > 0) {
-        next.users = [...seen.values()];
-        next.counts.users = next.users.length;
-      }
-    }
 
     setData(next);
     setError(failed.length ? `Could not load: ${failed.join(", ")}` : "");
