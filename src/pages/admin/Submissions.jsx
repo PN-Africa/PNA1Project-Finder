@@ -402,4 +402,4 @@ export function UserProfilePage() {
   );
 }
 
-export default Submissions;
+export default Submissionspages;
