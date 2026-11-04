@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { FiLayout } from "react-icons/fi";
 import CreateProject from "./CreateProject";
-import SimulationDetail from "./SimulationDetail";
+import SimulationDetail from "./Simulationdetail";
 
 const API_BASE = "https://project-finder-q5t2.onrender.com/api";
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}` });
