@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import LogoImage from "../assets/logo.jpg";
-import { useNavigate, NavLink } from "react-router";
+import { NavLink } from "react-router";
 import { IoMdEye, IoMdEyeOff } from "react-icons/io";
 
 const API_BASE = "https://project-finder-q5t2.onrender.com/api";
@@ -11,13 +11,10 @@ const inputBase =
 const inputError = "border-red-600 focus:border-red-600 focus:ring-red-600/15";
 
 const SignUp = () => {
-  const navigate = useNavigate();
-
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState("");
   const [success, setSuccess] = useState(false);
-
 
   const [form, setForm] = useState({
     fullName: "",
@@ -61,7 +58,7 @@ const SignUp = () => {
             : value.length < 8
             ? "Password must be at least 8 characters"
             : "";
-        
+
         if (form.confirmPassword !== "") {
           next.confirmPassword =
             value !== form.confirmPassword ? "Passwords do not match" : "";
@@ -116,7 +113,6 @@ const SignUp = () => {
     setErrors(nextErrors);
     if (Object.values(nextErrors).some((m) => m !== "")) return;
 
-    // "Faith Odunayo Pelumi" -> first_name "Faith", last_name "Odunayo Pelumi"
     const [firstName, ...rest] = form.fullName.trim().split(/\s+/);
 
     setLoading(true);
@@ -125,7 +121,7 @@ const SignUp = () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          username: form.email, // usernames can't contain spaces, so use the email
+          username: form.email,
           first_name: firstName,
           last_name: rest.join(" "),
           email: form.email,
@@ -148,8 +144,8 @@ const SignUp = () => {
         );
         return;
       }
+
       setSuccess(true);
-      setTimeout(() => navigate("/login"), 1500);
     } catch {
       setServerError("Network error. Please try again.");
     } finally {
@@ -295,18 +291,22 @@ const SignUp = () => {
             {serverError}
           </p>
         )}
+
         {success && (
-          <p className="mb-3 rounded-md border border-green-300 bg-green-100 px-3 py-2 text-sm text-green-800">
-            Account created! Redirecting to login…
-          </p>
+          <div className="mb-3 rounded-md border border-green-300 bg-green-100 px-3 py-2 text-sm text-green-800">
+            <p className="font-semibold">Account created successfully!</p>
+            <p className="mt-1">
+              We've sent a verification link to <strong>{form.email}</strong>. Please check your inbox (and spam folder) to activate your account before logging in.
+            </p>
+          </div>
         )}
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || success}
           className="mt-1.5 rounded-lg bg-blue-600 py-3 text-base font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 max-[480px]:min-h-[44px]"
         >
-          {loading ? "Creating account…" : "Create Account"}
+          {loading ? "Creating account…" : success ? "Email Sent" : "Create Account"}
         </button>
       </form>
 
