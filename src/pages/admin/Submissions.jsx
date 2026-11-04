@@ -77,25 +77,12 @@ const Page = ({ title, children }) => (
 
 function SubmissionFiles({ simulationId, onClose }) {
   const { data, loading, error } = useFetch(async () => {
-    // 1. Try to find files inside the simulation object itself
-    const res = await fetch(`${API_BASE}/admin/simulations/${simulationId}/`, {
-      headers: authHeaders(),
-    });
-    if (res.ok) {
-      const simData = await res.json();
-      const filesArray = simData.files || simData.uploads || simData.documents || simData.attachments;
-      if (Array.isArray(filesArray) && filesArray.length > 0) {
-        return filesArray;
-      }
-    }
-
-    // 2. Fallback to the uploads endpoint
-    const upRes = await fetch(`${API_BASE}/admin/simulations/${simulationId}/uploads/`, {
+    const res = await fetch(`${API_BASE}/admin/simulations/${simulationId}/uploads/`, {
       headers: authHeaders(),
     });
     
-    if (upRes.ok) {
-      const upData = await upRes.json();
+    if (res.ok) {
+      const upData = await res.json();
       return listOf(upData);
     }
 
@@ -104,7 +91,6 @@ function SubmissionFiles({ simulationId, onClose }) {
 
   const handleDownload = async (url, filename) => {
     try {
-      // Fetch the file as a blob to force download with the correct filename
       const res = await fetch(url);
       const blob = await res.blob();
       const objectUrl = window.URL.createObjectURL(blob);
@@ -119,7 +105,6 @@ function SubmissionFiles({ simulationId, onClose }) {
       window.URL.revokeObjectURL(objectUrl);
     } catch (err) {
       console.error("Download failed", err);
-      // Fallback: just open in new tab if blob fetch fails
       window.open(url, "_blank");
     }
   };
@@ -331,7 +316,7 @@ function Field({ label: text, children }) {
 }
 
 export function UserProfilePage() {
-  const { userId } = useParams(); // route: /admin/users/:userId
+  const { userId } = useParams();
 
   const { data, loading, error } = useFetch(async () => {
     const [profile, sims] = await Promise.all([
@@ -402,4 +387,4 @@ export function UserProfilePage() {
   );
 }
 
-export default Submissionspages;
+export default SubmissionsPage;
