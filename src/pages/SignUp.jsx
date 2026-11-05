@@ -165,7 +165,7 @@ const SignUp = () => {
         </h1>
       </div>
       <h3 className="my-5 mb-6 text-[1.4rem] text-slate-500 max-[480px]:my-4 max-[480px]:mb-5 max-[480px]:text-xl">
-        Let's get you started
+        Create your account
       </h3>
 
       <form onSubmit={handleSubmit} noValidate className="flex flex-col text-left">
@@ -177,7 +177,7 @@ const SignUp = () => {
           type="text"
           name="fullName"
           value={form.fullName}
-          placeholder="Enter Full name"
+          placeholder="Enter your full name"
           onChange={handleChange}
           autoComplete="name"
           className={`${inputBase} mb-3.5 ${errors.fullName ? inputError : ""}`}
@@ -185,7 +185,7 @@ const SignUp = () => {
         {errorText(errors.fullName)}
 
         <label htmlFor="email" className="mb-1.5 text-sm font-medium text-slate-900">
-          Email
+          Email Address
         </label>
         <input
           id="email"
@@ -209,7 +209,7 @@ const SignUp = () => {
           onChange={handleChange}
           className={`${inputBase} mb-3.5 ${errors.role ? inputError : ""}`}
         >
-          <option value="">Select Professional Role</option>
+          <option value="">Select your role</option>
           <option value="Project Manager">Project Manager</option>
           <option value="Project Coordinator">Project Coordinator</option>
           <option value="Project Support Officer">Project Support Officer</option>
@@ -228,7 +228,7 @@ const SignUp = () => {
               htmlFor="otherCategory"
               className="mb-1.5 text-sm font-medium text-slate-900"
             >
-              Please specify your role
+              Specify your role
             </label>
             <input
               id="otherCategory"
@@ -254,6 +254,7 @@ const SignUp = () => {
             value={form.password}
             onChange={handleChange}
             autoComplete="new-password"
+            placeholder="Create a password (min 8 characters)"
             className={`${inputBase} pr-10 ${errors.password ? inputError : ""}`}
           />
           <button
@@ -280,6 +281,7 @@ const SignUp = () => {
           value={form.confirmPassword}
           onChange={handleChange}
           autoComplete="new-password"
+          placeholder="Re-enter your password"
           className={`${inputBase} mb-3.5 ${
             errors.confirmPassword ? inputError : ""
           }`}
@@ -287,16 +289,17 @@ const SignUp = () => {
         {errorText(errors.confirmPassword)}
 
         {serverError && (
-          <p className="mb-3 rounded-md border border-red-300 bg-red-100 px-3 py-2 text-sm text-red-800">
-            {serverError}
-          </p>
+          <div className="mb-3 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-left text-sm text-red-800">
+            <p className="font-semibold">Registration failed</p>
+            <p className="mt-1 text-red-700">{serverError}</p>
+          </div>
         )}
 
         {success && (
-          <div className="mb-3 rounded-md border border-green-300 bg-green-100 px-3 py-2 text-sm text-green-800">
-            <p className="font-semibold">Account created successfully!</p>
-            <p className="mt-1">
-              We've sent a verification link to <strong>{form.email}</strong>. Please check your inbox (and spam folder) to activate your account before logging in.
+          <div className="mb-3 rounded-md border border-green-300 bg-green-50 px-4 py-3 text-left text-sm text-green-800">
+            <p className="font-semibold">Registration successful</p>
+            <p className="mt-1 text-green-700">
+              We have sent a verification link to <strong>{form.email}</strong>. Please check your inbox and click the link to activate your account.
             </p>
           </div>
         )}
@@ -306,11 +309,11 @@ const SignUp = () => {
           disabled={loading || success}
           className="mt-1.5 rounded-lg bg-blue-600 py-3 text-base font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 max-[480px]:min-h-[44px]"
         >
-          {loading ? "Creating account…" : success ? "Email Sent" : "Create Account"}
+          {loading ? "Creating account..." : success ? "Email Sent" : "Create Account"}
         </button>
       </form>
 
-      <p className="p-2 text-sm text-slate-600">
+      <p className="mt-6 text-sm text-slate-600">
         Already have an account?{" "}
         <NavLink to="/login" className="font-medium text-blue-600 hover:underline">
           Sign In

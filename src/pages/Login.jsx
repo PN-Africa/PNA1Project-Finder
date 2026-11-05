@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import LogoImage from "../assets/logo.jpg";
-import { useNavigate, NavLink } from "react-router";
+import { useNavigate, NavLink, useSearchParams } from "react-router";
 import { IoMdEye, IoMdEyeOff } from "react-icons/io";
 import { setSession, getCurrentUser, isAdmin, logout as clearSession } from "../utils/auth";
 
@@ -13,7 +13,8 @@ const inputError = "border-red-600 focus:border-red-600 focus:ring-red-600/15";
 
 const Login = () => {
   const navigate = useNavigate();
-
+  const [searchParams] = useSearchParams();
+  
   const [view, setView] = useState("signin");
   const [loginAs, setLoginAs] = useState("user");
   const [showPassword, setShowPassword] = useState(false);
@@ -27,6 +28,7 @@ const Login = () => {
   const [forgotError, setForgotError] = useState("");
 
   const isAdminTab = loginAs === "admin";
+  const wasVerified = searchParams.get("verified") === "true";
 
   const switchTab = (role) => {
     setLoginAs(role);
@@ -91,7 +93,7 @@ const Login = () => {
             data.non_field_errors?.[0] ||
             data.email?.[0] ||
             data.password?.[0] ||
-            "Login failed. Check your email and password."
+            "Login failed. Please check your credentials."
         );
         return;
       }
@@ -103,7 +105,7 @@ const Login = () => {
 
       if (isAdminTab && !userIsAdmin) {
         clearSession();
-        setServerError("This account does not have admin privileges.");
+        setServerError("This account does not have administrative privileges. Please use the User tab.");
         return;
       }
 
@@ -131,7 +133,7 @@ const Login = () => {
       if (!res.ok && res.status !== 204) {
         const data = await res.json().catch(() => ({}));
         setForgotError(
-          data.email?.[0] || data.detail || "Could not send reset email. Try again."
+          data.email?.[0] || data.detail || "Could not send reset email. Please try again."
         );
         return;
       }
@@ -186,6 +188,15 @@ const Login = () => {
             {isAdminTab ? "Admin Login" : "Welcome Back"}
           </h3>
 
+          {wasVerified && (
+            <div className="mb-3 rounded-md border border-green-300 bg-green-50 px-4 py-3 text-left text-sm text-green-800">
+              <p className="font-semibold">Account activated</p>
+              <p className="mt-1 text-green-700">
+                Your email has been verified. Please sign in to continue.
+              </p>
+            </div>
+          )}
+
           <form onSubmit={handleLogin} noValidate className="flex flex-col text-left">
             <label htmlFor="email" className="mb-1.5 text-sm font-medium text-slate-900">
               Email
@@ -231,9 +242,10 @@ const Login = () => {
             )}
 
             {serverError && (
-              <p className="mb-3 rounded-md border border-red-300 bg-red-100 px-3 py-2 text-sm text-red-800">
-                {serverError}
-              </p>
+              <div className="mb-3 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-left text-sm text-red-800">
+                <p className="font-semibold">Login failed</p>
+                <p className="mt-1 text-red-700">{serverError}</p>
+              </div>
             )}
 
             {!isAdminTab && (
@@ -260,12 +272,12 @@ const Login = () => {
               disabled={loading}
               className="mt-1.5 rounded-lg bg-blue-600 py-3 text-base font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 max-[480px]:min-h-[44px]"
             >
-              {loading ? "Signing in…" : isAdminTab ? "Log In as Admin" : "Log In"}
+              {loading ? "Signing in..." : isAdminTab ? "Log In as Admin" : "Log In"}
             </button>
           </form>
 
           {!isAdminTab && (
-            <p className="p-2 text-sm text-slate-600">
+            <p className="mt-6 text-sm text-slate-600">
               Don't have an account?{" "}
               <NavLink to="/signup" className="font-medium text-blue-600 hover:underline">
                 Sign Up
@@ -281,7 +293,7 @@ const Login = () => {
             Reset your password
           </h3>
           <p className="mb-4 text-left text-sm leading-relaxed text-slate-500">
-            Enter the email tied to your account. We'll send a reset link.
+            Enter the email registered with your account. A reset link will be sent.
           </p>
 
           <form onSubmit={handleForgot} noValidate className="flex flex-col text-left">
@@ -310,7 +322,7 @@ const Login = () => {
               disabled={loading}
               className="mt-1.5 rounded-lg bg-blue-600 py-3 text-base font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 max-[480px]:min-h-[44px]"
             >
-              {loading ? "Sending…" : "Send reset link"}
+              {loading ? "Sending..." : "Send reset link"}
             </button>
 
             <button
@@ -330,8 +342,7 @@ const Login = () => {
             Check your email
           </h3>
           <p className="mb-4 text-left text-sm leading-relaxed text-slate-500">
-            If an account exists for <strong>{forgotEmail}</strong>, a reset link is on
-            its way. Check spam too.
+             A password reset link has been sent to your email. Please check your inbox to continue.
           </p>
           <button
             type="button"
