@@ -8,10 +8,12 @@ import {
   MdOutlinePersonOutline,
   MdLogout,
   MdOutlineKeyboardArrowUp,
+  MdClose,
 } from "react-icons/md";
+import { LuPanelLeft, LuPanelLeftClose } from "react-icons/lu";
 import { AdminDataProvider } from "../context/AdminDataContext";
 import ConfirmModal from "../components/user/ConfirmModal";
-import { logout, getCurrentUser } from "../utils/auth";
+import { logout } from "../utils/auth";
 import LogoImage from "../assets/logo.jpg";
 
 const mainLinks = [
@@ -22,18 +24,17 @@ const mainLinks = [
 ];
 
 const baseLink =
-  "flex w-full items-center gap-3 rounded-lg px-3.5 py-2.5 text-left text-[0.95rem] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white";
-
-const linkClass = ({ isActive }) =>
-  `${baseLink} ${isActive ? "bg-white text-[#12294d]" : "text-white hover:bg-white/10"}`;
+  "flex w-full items-center gap-3 rounded-lg px-3.5 py-2.5 text-left text-[0.95rem] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white transition-all";
 
 const AdminLayout = () => {
   const navigate = useNavigate();
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  
   const menuRef = useRef(null);
 
-  
   useEffect(() => {
     const handleClick = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
@@ -56,51 +57,117 @@ const AdminLayout = () => {
     navigate("/project-library");
   };
 
-  const user = getCurrentUser();
-  const adminName = user?.first_name || user?.full_name || user?.username || "Admin";
+  const linkClass = ({ isActive }) =>
+    `${baseLink} ${isActive ? "bg-white text-[#12294d]" : "text-white hover:bg-white/10"} ${
+      isCollapsed ? "justify-center px-2" : ""
+    }`;
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#eef3f0] text-gray-800 md:flex-row">
-      <aside className="flex w-full shrink-0 flex-col bg-[#12294d] p-4 text-white md:sticky md:top-0 md:h-screen md:w-64 md:py-6">
-        <div className="flex flex-col items-center gap-2 border-b border-white/25 pb-4">
-          <img src={LogoImage} alt="Project Finder logo" className="h-11 w-11 rounded-md object-contain" />
-          <span className="font-bold tracking-wide">PROJECT FINDER</span>
+    <div className="flex min-h-screen bg-[#eef3f0] text-gray-800">
+      
+      {/* MOBILE TOP BAR */}
+      <div className="fixed top-0 left-0 z-40 flex w-full items-center justify-between bg-[#12294d] p-4 text-white md:hidden">
+        <div className="flex items-center gap-2">
+          <img src={LogoImage} alt="Logo" className="h-8 w-8 rounded object-contain" />
+          <span className="font-bold">PROJECT FINDER</span>
+        </div>
+        <button onClick={() => setIsMobileOpen(true)} className="text-white">
+          <LuPanelLeft size={28} />
+        </button>
+      </div>
+
+      {/* SIDEBAR */}
+      <aside
+        className={`
+          fixed inset-y-0 left-0 z-50 flex flex-col bg-[#12294d] p-4 text-white transition-all duration-300 ease-in-out
+          md:static md:h-screen
+          ${isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
+          ${isCollapsed ? "md:w-20" : "md:w-64"}
+          w-64
+        `}
+      >
+        {/* Logo & Toggle */}
+        <div className={`flex items-center border-b border-white/25 pb-4 ${isCollapsed ? "justify-center" : "justify-between"}`}>
+          <div className="flex flex-col items-center gap-2">
+            <img src={LogoImage} alt="Project Finder logo" className="h-11 w-11 rounded-md object-contain" />
+            {!isCollapsed && <span className="font-bold tracking-wide">PROJECT FINDER</span>}
+          </div>
+          
+          {/* DESKTOP TOGGLE (Panel Icon) */}
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="hidden md:flex rounded-md p-1 text-white/50 hover:bg-white/10 hover:text-white transition-colors"
+            aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {isCollapsed ? <LuPanelLeft size={22} /> : <LuPanelLeftClose size={22} />}
+          </button>
+
+          {/* MOBILE CLOSE TOGGLE */}
+          <button
+            onClick={() => setIsMobileOpen(false)}
+            className="flex md:hidden text-white/70 hover:text-white"
+          >
+            <MdClose size={24} />
+          </button>
         </div>
 
+        {/* Nav Links */}
         <nav className="mt-6 flex flex-col gap-2">
           {mainLinks.map((link) => (
-            <NavLink key={link.to} to={link.to} end={link.end} className={linkClass}>
+            <NavLink
+              key={link.to}
+              to={link.to}
+              end={link.end}
+              className={linkClass}
+              title={isCollapsed ? link.label : undefined}
+              onClick={() => setIsMobileOpen(false)}
+            >
               {link.icon}
-              <span>{link.label}</span>
+              {!isCollapsed && <span>{link.label}</span>}
             </NavLink>
           ))}
         </nav>
 
-        <div className="mt-4 flex flex-col gap-2 md:mt-auto">
-          <NavLink to="/admin/profile" className={linkClass}>
+        {/* Bottom Section (Profile & Account) */}
+        <div className="mt-auto flex flex-col gap-2 pt-4">
+          <NavLink
+            to="/admin/profile"
+            className={linkClass}
+            title={isCollapsed ? "Profile" : undefined}
+            onClick={() => setIsMobileOpen(false)}
+          >
             <MdOutlinePersonOutline size={20} />
-            <span>Profile</span>
+            {!isCollapsed && <span>Profile</span>}
           </NavLink>
 
-          {/* ⬇️ DROPDOWN MENU ⬇️ */}
+          {/* Account Dropdown */}
           <div className="relative" ref={menuRef}>
             <button
               type="button"
               onClick={() => setMenuOpen(!menuOpen)}
-              className={`${baseLink} cursor-pointer text-white hover:bg-white/10 justify-between`}
+              className={`${baseLink} cursor-pointer text-white hover:bg-white/10 justify-between ${
+                isCollapsed ? "justify-center px-2" : ""
+              }`}
+              title={isCollapsed ? "Account" : undefined}
             >
               <div className="flex items-center gap-3">
                 <MdOutlinePersonOutline size={20} />
-                <span>Account</span>
+                {!isCollapsed && <span>Account</span>}
               </div>
-              <MdOutlineKeyboardArrowUp
-                size={20}
-                className={`transition-transform duration-200 ${menuOpen ? "rotate-180" : ""}`}
-              />
+              {!isCollapsed && (
+                <MdOutlineKeyboardArrowUp
+                  size={20}
+                  className={`transition-transform duration-200 ${menuOpen ? "rotate-180" : ""}`}
+                />
+              )}
             </button>
 
             {menuOpen && (
-              <div className="absolute bottom-full left-0 mb-2 w-full rounded-lg border border-slate-700 bg-[#1a345c] py-1 shadow-xl">
+              <div
+                className={`absolute bottom-full left-0 mb-2 w-48 rounded-lg border border-slate-700 bg-[#1a345c] py-1 shadow-xl ${
+                  isCollapsed ? "ml-2" : "w-full"
+                }`}
+              >
                 <button
                   onClick={handleLoginAsUser}
                   className="flex w-full items-center gap-3 px-4 py-2 text-sm text-white hover:bg-white/10"
@@ -125,7 +192,16 @@ const AdminLayout = () => {
         </div>
       </aside>
 
-      <main className="min-w-0 flex-1 px-4 py-6 md:px-8 md:py-10">
+      {/* OVERLAY for Mobile */}
+      {isMobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          onClick={() => setIsMobileOpen(false)}
+        />
+      )}
+
+      {/* MAIN CONTENT */}
+      <main className="min-w-0 flex-1 px-4 py-6 pt-24 md:px-8 md:py-10 md:pt-10 transition-all duration-300">
         <AdminDataProvider>
           <Outlet />
         </AdminDataProvider>

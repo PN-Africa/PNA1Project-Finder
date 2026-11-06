@@ -33,6 +33,8 @@ const router = createBrowserRouter([
           { path: "/signup", element: <SignUp /> },
           { path: "/reset-password", element: <ResetPassword /> },
           { path: "/verify-email", element: <VerifyEmail /> },
+          { path: "/reset-password/:uid/:token", element: <ResetPassword /> },
+{ path: "/verify-email/:key", element: <VerifyEmail /> },
         ],
       },
     ],

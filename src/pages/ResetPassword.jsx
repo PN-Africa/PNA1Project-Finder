@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import LogoImage from "../assets/logo.jpg";
-import { Link, useSearchParams, useNavigate } from "react-router";
+import { Link, useSearchParams, useNavigate, useParams } from "react-router";
 import { IoMdEye, IoMdEyeOff } from "react-icons/io";
 
 const API_BASE = "https://project-finder-q5t2.onrender.com/api";
@@ -10,10 +10,12 @@ const inputBase =
 
 const ResetPassword = () => {
   const [searchParams] = useSearchParams();
+  const { uid: pathUid, token: pathToken } = useParams();
   const navigate = useNavigate();
 
-  const uid = searchParams.get("uid");
-  const token = searchParams.get("token");
+  // Read from ?uid=... OR from /uid/token/
+  const uid = searchParams.get("uid") || pathUid;
+  const token = searchParams.get("token") || pathToken;
 
   const [newPassword, setNewPassword] = useState("");
   const [reNewPassword, setReNewPassword] = useState("");
@@ -51,7 +53,7 @@ const ResetPassword = () => {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.detail || data.new_password1?.[0] || "Could not reset password.");
+        throw new Error(data.detail || data.new_password1?.[0] || "Could not reset password. The link may have expired.");
       }
 
       navigate("/login?reset=success");
@@ -76,7 +78,6 @@ const ResetPassword = () => {
       </h3>
 
       <form onSubmit={handleSubmit} noValidate className="flex flex-col text-left">
-        
         <label htmlFor="newPassword" className="mb-1.5 text-sm font-medium text-slate-900">
           New Password
         </label>
@@ -113,9 +114,10 @@ const ResetPassword = () => {
         </div>
 
         {error && (
-          <p className="mb-3 rounded-md border border-red-300 bg-red-100 px-3 py-2 text-sm text-red-800">
-            {error}
-          </p>
+          <div className="mb-3 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-left text-sm text-red-800">
+            <p className="font-semibold">Reset failed</p>
+            <p className="mt-1 text-red-700">{error}</p>
+          </div>
         )}
 
         <button
@@ -123,7 +125,7 @@ const ResetPassword = () => {
           disabled={loading}
           className="mt-1.5 rounded-lg bg-blue-600 py-3 text-base font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 max-[480px]:min-h-[44px]"
         >
-          {loading ? "Resetting…" : "Reset Password"}
+          {loading ? "Resetting..." : "Reset Password"}
         </button>
 
         <Link

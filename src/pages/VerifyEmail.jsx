@@ -1,19 +1,21 @@
 import React, { useEffect, useState } from "react";
-import { Link, useSearchParams, useNavigate } from "react-router";
+import { Link, useSearchParams, useNavigate, useParams } from "react-router";
 import LogoImage from "../assets/logo.jpg";
 
 const API_BASE = "https://project-finder-q5t2.onrender.com/api";
 
 const VerifyEmail = () => {
   const [searchParams] = useSearchParams();
+  const { key: pathKey } = useParams();
   const navigate = useNavigate();
   
+  // Read from ?key=... OR from /key
+  const key = searchParams.get("key") || pathKey;
+
   const [status, setStatus] = useState("verifying");
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const key = searchParams.get("key");
-
     if (!key) {
       setStatus("error");
       setError("The verification link is missing a required token. Please check the URL or request a new verification email.");
@@ -30,7 +32,7 @@ const VerifyEmail = () => {
 
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
-          throw new Error(data.detail || "This verification link is invalid or has expired. Please request a new one.");
+          throw new Error(data.detail || "This verification link is invalid or has expired.");
         }
 
         setStatus("success");
@@ -46,7 +48,7 @@ const VerifyEmail = () => {
     };
 
     verify();
-  }, [searchParams, navigate]);
+  }, [key, navigate]);
 
   return (
     <div className="mx-auto my-32 w-full max-w-[400px] rounded-xl bg-white px-7 py-8 text-center shadow-[0_2px_12px_rgba(15,31,61,0.08)]">

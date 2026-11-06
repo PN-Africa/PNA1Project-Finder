@@ -1,11 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useParams, Link } from "react-router";
-import { FiUploadCloud, FiFileText, FiArrowLeft, FiCheck } from "react-icons/fi";
+import { FiUploadCloud, FiFileText, FiArrowLeft, FiCheck, FiDownload } from "react-icons/fi";
 import ConfirmModal from "../components/user/ConfirmModal";
 import FileMenu from "../components/user/FileMenu";
 import { getSimulation, getProject, submitSimulation } from "../../src/utils/simulation";
 
-const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_SIZE = 10 * 1024 * 1024;
 const ALLOWED = [".pdf", ".docx", ".xlsx"];
 
 const getTimeLeft = (end) => {
@@ -35,6 +35,7 @@ const toProject = (p = {}) => ({
   role: p.professional_role ?? p.role,
   tasks: p.tasks,
   deliverables: p.deliverables ?? p.required_deliverables,
+  brief: p.brief || p.brief_url || p.project_brief,
 });
 
 const Section = ({ title, children }) => (
@@ -71,7 +72,6 @@ const Simulation = () => {
       setLoadError("");
       try {
         const sim = await getSimulation(id);
-        console.log("RAW simulation response:", sim);
 
         let p = sim.project ?? sim.project_detail;
         if (p && typeof p !== "object") p = await getProject(p);
@@ -153,7 +153,7 @@ const Simulation = () => {
     }
     
     replaceIndex.current = null;
-    e.target.value = ""; // Reset input
+    e.target.value = "";
   };
 
   const removeFile = (index) => setFiles((prev) => prev.filter((_, i) => i !== index));
@@ -168,14 +168,9 @@ const Simulation = () => {
     setConfirmSubmit(false);
     setSubmitting(true);
     setSubmitError("");
-    
-    console.log("SUBMITTING FILES:", files); // Debug log
 
     try {
       await submitSimulation(id, files);
-      
-      console.log("SUBMISSION SUCCESSFUL");
-      
       setSubmitted(true);
       setSubmittedDate(
         new Date().toLocaleString("en-GB", {
@@ -205,8 +200,7 @@ const Simulation = () => {
   }
 
   return (
-    <div className=" max-w-3xl p-8 pb-20">
-      
+    <div className="mx-auto max-w-3xl p-6 pb-20">
       <h1 className="text-2xl font-bold text-[#17324D]">{project.title}</h1>
       <p className="mt-1 text-xs text-slate-500">
         {project.industry} · {project.difficulty}
@@ -231,6 +225,20 @@ const Simulation = () => {
             </p>
           </div>
         )
+      )}
+
+      {/* ⬇️ NEW: Show the brief document uploaded by the Admin ⬇️ */}
+      {project.brief && (
+        <div className="mt-6">
+          <a
+            href={project.brief}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 rounded-lg border border-[#2563EB] px-4 py-2 text-sm font-medium text-[#2563EB] hover:bg-blue-50"
+          >
+            <FiDownload /> Download Project Brief
+          </a>
+        </div>
       )}
 
       {project.scenario && <Section title="Scenario">{project.scenario}</Section>}

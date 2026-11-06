@@ -6,7 +6,7 @@ import ProfileMenu from "./ProfileMenu";
 
 const links = [
   { to: "/project-library", label: "Project Library" },
-  { to: "/my-simulations", label: "My Simulations" }, 
+  { to: "/my-simulations", label: "My Simulations" },
 ];
 
 const linkClass =
@@ -16,12 +16,13 @@ const NavBar = () => {
   const [open, setOpen] = useState(false);
 
   return (
-    <nav className="nav-container relative m-6 flex flex-wrap items-center justify-between bg-[#17324D] p-3 ">
-      <div className="nav-logo flex items-center gap-1">
+    <nav className="relative m-6 flex flex-wrap items-center justify-between rounded-lg bg-[#17324D] p-3">
+      <div className="flex items-center gap-1">
         <img src={LogoImage} alt="logo" className="h-10 w-auto p-1" />
         <span className="p-2 font-bold text-white">PROJECT FINDER</span>
       </div>
 
+      {/* Hamburger button for mobile */}
       <button
         type="button"
         onClick={() => setOpen(!open)}
@@ -32,8 +33,9 @@ const NavBar = () => {
         {open ? <IoMdClose size={26} /> : <IoMdMenu size={26} />}
       </button>
 
+      {/* Menu Links */}
       <ul
-        className={`nav-menu w-full flex-col gap-1 px-4 pb-4 pt-2
+        className={`w-full flex-col gap-1 px-4 pb-4 pt-2
           ${open ? "flex" : "hidden"}
           md:ml-auto md:mr-5 md:flex md:w-auto md:flex-row md:gap-5 md:p-0`}
       >
