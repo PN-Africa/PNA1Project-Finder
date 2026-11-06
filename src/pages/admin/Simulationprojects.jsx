@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { FiLayout } from "react-icons/fi";
 import CreateProject from "./CreateProject";
-import SimulationDetail from "./Simulationdetail";
+import SimulationDetail from "./SimulationDetail";
+import ConfirmModal from "../components/user/ConfirmModal"; // ⬅️ Import Modal
 
 const API_BASE = "https://project-finder-q5t2.onrender.com/api";
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}` });
@@ -34,6 +35,9 @@ export default function SimulationProjects() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState(null);
+  
+  
+  const [projectToDelete, setProjectToDelete] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -60,14 +64,12 @@ export default function SimulationProjects() {
     const nextState = !project.is_published;
     
     try {
-      
       let res = await fetch(`${API_BASE}/admin/projects/${project.id}/status/`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify({ is_published: nextState }),
       });
 
-      // If that fails, try status string
       if (!res.ok) {
         res = await fetch(`${API_BASE}/admin/projects/${project.id}/status/`, {
           method: "POST",
@@ -89,9 +91,14 @@ export default function SimulationProjects() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this project? This cannot be undone.")) return;
+  
+  const handleDelete = async () => {
+    if (!projectToDelete) return;
+    const id = projectToDelete.id;
+    
+    setProjectToDelete(null); 
     setBusyId(id);
+    
     try {
       const res = await fetch(`${API_BASE}/admin/projects/${id}/`, {
         method: "DELETE",
@@ -162,7 +169,6 @@ export default function SimulationProjects() {
         {projects.map((p) => (
           <div key={p.id} className="flex flex-col justify-between gap-6 rounded-xl bg-white p-6 shadow-sm md:flex-row md:items-center">
             
-            {/* Left Side */}
             <div className="flex items-start gap-4">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-blue-50 text-[#2563EB]">
                 <FiLayout className="h-5 w-5" />
@@ -175,7 +181,6 @@ export default function SimulationProjects() {
               </div>
             </div>
 
-            {/* Right Side */}
             <div className="flex flex-col items-start gap-4 md:items-end">
               
               <span
@@ -215,7 +220,7 @@ export default function SimulationProjects() {
 
                 <button
                   type="button"
-                  onClick={() => handleDelete(p.id)}
+                  onClick={() => setProjectToDelete(p)} // ⬅️ Opens the modal
                   disabled={busyId === p.id}
                   className="rounded bg-[#ef4444] px-4 py-1.5 text-xs font-medium text-white hover:bg-red-600 disabled:opacity-50"
                 >
@@ -227,6 +232,16 @@ export default function SimulationProjects() {
           </div>
         ))}
       </div>
+
+      
+      <ConfirmModal
+        open={!!projectToDelete}
+        title="Delete Project"
+        message={`Are you sure you want to delete "${projectToDelete?.title}"? This action cannot be undone.`}
+        confirmLabel="Delete"
+        onConfirm={handleDelete}
+        onCancel={() => setProjectToDelete(null)}
+      />
     </div>
   );
 }

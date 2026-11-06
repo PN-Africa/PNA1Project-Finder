@@ -65,7 +65,7 @@ const AdminLayout = () => {
   return (
     <div className="flex min-h-screen bg-[#eef3f0] text-gray-800">
       
-      {/* MOBILE TOP BAR */}
+      
       <div className="fixed top-0 left-0 z-40 flex w-full items-center justify-between bg-[#12294d] p-4 text-white md:hidden">
         <div className="flex items-center gap-2">
           <img src={LogoImage} alt="Logo" className="h-8 w-8 rounded object-contain" />
@@ -76,7 +76,7 @@ const AdminLayout = () => {
         </button>
       </div>
 
-      {/* SIDEBAR */}
+      
       <aside
         className={`
           fixed inset-y-0 left-0 z-50 flex flex-col bg-[#12294d] p-4 text-white transition-all duration-300 ease-in-out
@@ -86,14 +86,14 @@ const AdminLayout = () => {
           w-64
         `}
       >
-        {/* Logo & Toggle */}
+      
         <div className={`flex items-center border-b border-white/25 pb-4 ${isCollapsed ? "justify-center" : "justify-between"}`}>
           <div className="flex flex-col items-center gap-2">
             <img src={LogoImage} alt="Project Finder logo" className="h-11 w-11 rounded-md object-contain" />
             {!isCollapsed && <span className="font-bold tracking-wide">PROJECT FINDER</span>}
           </div>
           
-          {/* DESKTOP TOGGLE (Panel Icon) */}
+  
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
             className="hidden md:flex rounded-md p-1 text-white/50 hover:bg-white/10 hover:text-white transition-colors"
@@ -102,7 +102,7 @@ const AdminLayout = () => {
             {isCollapsed ? <LuPanelLeft size={22} /> : <LuPanelLeftClose size={22} />}
           </button>
 
-          {/* MOBILE CLOSE TOGGLE */}
+         
           <button
             onClick={() => setIsMobileOpen(false)}
             className="flex md:hidden text-white/70 hover:text-white"
@@ -111,7 +111,7 @@ const AdminLayout = () => {
           </button>
         </div>
 
-        {/* Nav Links */}
+       
         <nav className="mt-6 flex flex-col gap-2">
           {mainLinks.map((link) => (
             <NavLink
@@ -128,7 +128,7 @@ const AdminLayout = () => {
           ))}
         </nav>
 
-        {/* Bottom Section (Profile & Account) */}
+       
         <div className="mt-auto flex flex-col gap-2 pt-4">
           <NavLink
             to="/admin/profile"
@@ -140,7 +140,7 @@ const AdminLayout = () => {
             {!isCollapsed && <span>Profile</span>}
           </NavLink>
 
-          {/* Account Dropdown */}
+          
           <div className="relative" ref={menuRef}>
             <button
               type="button"
@@ -192,7 +192,6 @@ const AdminLayout = () => {
         </div>
       </aside>
 
-      {/* OVERLAY for Mobile */}
       {isMobileOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/50 md:hidden"
@@ -200,7 +199,6 @@ const AdminLayout = () => {
         />
       )}
 
-      {/* MAIN CONTENT */}
       <main className="min-w-0 flex-1 px-4 py-6 pt-24 md:px-8 md:py-10 md:pt-10 transition-all duration-300">
         <AdminDataProvider>
           <Outlet />

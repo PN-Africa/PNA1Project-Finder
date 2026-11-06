@@ -10,6 +10,14 @@ const inputBase =
   "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-[0.95rem] text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-600 focus:ring-[3px] focus:ring-blue-600/15 transition sm:text-base";
 const inputError = "border-red-600 focus:border-red-600 focus:ring-red-600/15";
 
+
+const maskEmail = (email) => {
+  if (!email || !email.includes("@")) return email;
+  const [local, domain] = email.split("@");
+  if (local.length <= 2) return `${local[0]}***@${domain}`;
+  return `${local[0]}${"*".repeat(local.length - 1)}@${domain}`;
+};
+
 const SignUp = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -299,7 +307,7 @@ const SignUp = () => {
           <div className="mb-3 rounded-md border border-green-300 bg-green-50 px-4 py-3 text-left text-sm text-green-800">
             <p className="font-semibold">Registration successful</p>
             <p className="mt-1 text-green-700">
-              We have sent a verification link to <strong>{form.email}</strong>. Please check your inbox and click the link to activate your account.
+              We have sent a verification link to <strong>{maskEmail(form.email)}</strong>. Please check your inbox and click the link to activate your account.
             </p>
           </div>
         )}

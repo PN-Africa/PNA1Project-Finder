@@ -22,7 +22,6 @@ const NavBar = () => {
         <span className="p-2 font-bold text-white">PROJECT FINDER</span>
       </div>
 
-      {/* Hamburger button for mobile */}
       <button
         type="button"
         onClick={() => setOpen(!open)}
@@ -33,7 +32,7 @@ const NavBar = () => {
         {open ? <IoMdClose size={26} /> : <IoMdMenu size={26} />}
       </button>
 
-      {/* Menu Links */}
+      
       <ul
         className={`w-full flex-col gap-1 px-4 pb-4 pt-2
           ${open ? "flex" : "hidden"}

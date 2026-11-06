@@ -20,23 +20,28 @@ const getTimeLeft = (end) => {
 const label = (v) =>
   v == null ? "" : typeof v === "object" ? v.name ?? v.title ?? v.label ?? "" : String(v);
 
-const toProject = (p = {}) => ({
-  ...p,
-  title: p.title ?? p.name ?? "Untitled project",
-  industry: label(p.industry),
-  difficulty: label(p.difficulty_level ?? p.difficulty ?? p.level),
-  validity: p.validity,
-  validityDays: p.validityDays ?? p.validity_days ?? 90,
-  scenario: p.scenario_description ?? p.scenario,
-  businessProblem: p.business_problem ?? p.businessProblem,
-  objective: p.objective ?? p.objectives,
-  stakeholders: p.stakeholders,
-  context: p.context,
-  role: p.professional_role ?? p.role,
-  tasks: p.tasks,
-  deliverables: p.deliverables ?? p.required_deliverables,
-  brief: p.brief || p.brief_url || p.project_brief,
-});
+const toProject = (p = {}) => {
+  const rawBrief = p.brief || p.brief_url || p.project_brief || p.file || (Array.isArray(p.files) ? p.files[0]?.file : null) || (Array.isArray(p.documents) ? p.documents[0]?.file : null);
+  
+  return {
+    ...p,
+    title: p.title ?? p.name ?? "Untitled project",
+    industry: label(p.industry),
+    difficulty: label(p.difficulty_level ?? p.difficulty ?? p.level),
+    validity: p.validity,
+    validityDays: p.validityDays ?? p.validity_days ?? 90,
+    scenario: p.scenario_description ?? p.scenario,
+    businessProblem: p.business_problem ?? p.businessProblem,
+    objective: p.objective ?? p.objectives,
+    stakeholders: p.stakeholders,
+    context: p.context,
+    role: p.professional_role ?? p.role,
+    tasks: p.tasks,
+    deliverables: p.deliverables ?? p.required_deliverables,
+    brief: rawBrief,
+    briefName: typeof rawBrief === "string" ? rawBrief.split("/").pop() : "Project Brief"
+  };
+};
 
 const Section = ({ title, children }) => (
   <section className="mt-6">
@@ -179,7 +184,6 @@ const Simulation = () => {
         })
       );
     } catch (e) {
-      console.error("UPLOAD ERROR:", e);
       setSubmitError(e.message || "Could not submit. Please try again.");
     } finally {
       setSubmitting(false);
@@ -227,7 +231,6 @@ const Simulation = () => {
         )
       )}
 
-      {/* ⬇️ NEW: Show the brief document uploaded by the Admin ⬇️ */}
       {project.brief && (
         <div className="mt-6">
           <a

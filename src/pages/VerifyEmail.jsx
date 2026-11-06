@@ -9,7 +9,7 @@ const VerifyEmail = () => {
   const { key: pathKey } = useParams();
   const navigate = useNavigate();
   
-  // Read from ?key=... OR from /key
+  
   const key = searchParams.get("key") || pathKey;
 
   const [status, setStatus] = useState("verifying");
