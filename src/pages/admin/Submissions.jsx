@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router";
 import { FiChevronLeft, FiChevronRight, FiFileText } from "react-icons/fi";
+import { useAdminData } from "../../context/AdminDataContext";
 
 const API_BASE = "https://project-finder-q5t2.onrender.com/api";
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}` });
@@ -289,7 +290,7 @@ function SimulationHistory({ simulations }) {
   return (
     <ul className="grid gap-3">
       {simulations.map((s) => (
-        <li key={s.id} className="flex flex-wrap justify-between gap-4 rounded-lg bg-white px-4 py-3.5">
+        <li key={s.id} className="flex flex-wrap justify-between gap-4 rounded-lg bg-white px-4 py-3.5 shadow-sm">
           <div>
             <span className={`font-semibold ${NAVY}`}>{s.project}</span>
             <span className={MUTED}>
@@ -308,21 +309,27 @@ function SimulationHistory({ simulations }) {
 
 function Field({ label: text, children }) {
   return (
-    <div className="mt-6">
-      <dt className="text-sm font-semibold">{text}</dt>
-      <dd className={`mt-1 ${MUTED}`}>{children || "—"}</dd>
+    <div className="mt-6 border-b border-slate-100 pb-4 last:border-0 last:pb-0">
+      <dt className="text-sm font-semibold text-slate-600">{text}</dt>
+      <dd className={`mt-1 text-base ${NAVY}`}>{children || "—"}</dd>
     </div>
   );
 }
 
 export function UserProfilePage() {
   const { userId } = useParams();
+  const { users } = useAdminData();
 
   const { data, loading, error } = useFetch(async () => {
     const [profile, sims] = await Promise.all([
       getJson(userUrl(userId)).catch(() => null),
       getJson(SUBMISSIONS_URL).catch(() => ({ results: [] })),
     ]);
+
+    let finalProfile = profile;
+    if (!finalProfile) {
+      finalProfile = users.find((u) => String(u.id) === String(userId));
+    }
 
     const raw = listOf(sims);
 
@@ -335,8 +342,12 @@ export function UserProfilePage() {
     });
 
     const embedded = mine.find((s) => s.user && typeof s.user === "object")?.user;
-    return { profile: profile ?? embedded ?? null, simulations: mine.map(toRow) };
-  }, [userId]);
+    
+    return { 
+      profile: finalProfile ?? embedded ?? null, 
+      simulations: mine.map(toRow) 
+    };
+  }, [userId, users]);
 
   if (loading) {
     return (
@@ -359,6 +370,9 @@ export function UserProfilePage() {
     return (
       <Page title="User Profile">
         <p className={MUTED}>No details found for this user.</p>
+        <Link to="/admin/users" className="mt-4 inline-block text-blue-600 hover:underline">
+          &larr; Back to Users
+        </Link>
       </Page>
     );
   }
@@ -374,7 +388,13 @@ export function UserProfilePage() {
 
   return (
     <Page title="User Profile">
-      <dl className="max-w-2xl">
+      <div className="mb-6">
+        <Link to="/admin/users" className="text-sm text-blue-600 hover:underline">
+          &larr; Back to Users list
+        </Link>
+      </div>
+
+      <div className="max-w-2xl rounded-2xl bg-white p-6 shadow-sm">
         <Field label="Full Name">{personName(u)}</Field>
         <Field label="Email">{u?.email}</Field>
         <Field label="Professional Role">{label(u?.professional_role ?? u?.role)}</Field>
@@ -382,7 +402,7 @@ export function UserProfilePage() {
         <Field label="Simulation History">
           <SimulationHistory simulations={simulations} />
         </Field>
-      </dl>
+      </div>
     </Page>
   );
 }
