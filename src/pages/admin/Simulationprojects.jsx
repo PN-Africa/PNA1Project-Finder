@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { FiLayout } from "react-icons/fi";
 import CreateProject from "./CreateProject";
 import SimulationDetail from "./SimulationDetail";
-import ConfirmModal from "../components/user/ConfirmModal";
+import ConfirmModal from "../../components/user/ConfirmModal";
 
 const API_BASE = "https://project-finder-q5t2.onrender.com/api";
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}` });
@@ -233,11 +233,11 @@ export default function SimulationProjects() {
       <ConfirmModal
         open={!!projectToDelete}
         title="Delete Project"
-        message={`Are you sure you want to delete "${projectToDelete?.title}"? This action cannot be undone.`}
+        message={`Are you sure you want to delete "${projectToDelete?.title}"? This cannot be undone.`}
         confirmLabel="Delete"
         onConfirm={confirmDelete}
         onCancel={() => setProjectToDelete(null)}
       />
     </div>
   );
-} 
+}
