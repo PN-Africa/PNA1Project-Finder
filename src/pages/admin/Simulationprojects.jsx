@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { FiLayout } from "react-icons/fi";
 import CreateProject from "./CreateProject";
 import SimulationDetail from "./SimulationDetail";
-import ConfirmModal from "../components/user/ConfirmModal"; // ⬅️ Import Modal
+import ConfirmModal from "../components/user/ConfirmModal";
 
 const API_BASE = "https://project-finder-q5t2.onrender.com/api";
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}` });
@@ -35,8 +35,6 @@ export default function SimulationProjects() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState(null);
-  
-  
   const [projectToDelete, setProjectToDelete] = useState(null);
 
   const load = useCallback(async () => {
@@ -91,12 +89,10 @@ export default function SimulationProjects() {
     }
   };
 
-  
-  const handleDelete = async () => {
+  const confirmDelete = async () => {
     if (!projectToDelete) return;
     const id = projectToDelete.id;
     
-    setProjectToDelete(null); 
     setBusyId(id);
     
     try {
@@ -108,6 +104,7 @@ export default function SimulationProjects() {
         const errorData = await res.json().catch(() => ({}));
         throw new Error(errorData.detail || "Failed to delete project");
       }
+      setProjectToDelete(null);
       load();
     } catch (e) {
       alert(e.message || "Could not delete project");
@@ -220,7 +217,7 @@ export default function SimulationProjects() {
 
                 <button
                   type="button"
-                  onClick={() => setProjectToDelete(p)} // ⬅️ Opens the modal
+                  onClick={() => setProjectToDelete(p)}
                   disabled={busyId === p.id}
                   className="rounded bg-[#ef4444] px-4 py-1.5 text-xs font-medium text-white hover:bg-red-600 disabled:opacity-50"
                 >
@@ -233,13 +230,12 @@ export default function SimulationProjects() {
         ))}
       </div>
 
-      
       <ConfirmModal
         open={!!projectToDelete}
         title="Delete Project"
         message={`Are you sure you want to delete "${projectToDelete?.title}"? This action cannot be undone.`}
         confirmLabel="Delete"
-        onConfirm={handleDelete}
+        onConfirm={confirmDelete}
         onCancel={() => setProjectToDelete(null)}
       />
     </div>

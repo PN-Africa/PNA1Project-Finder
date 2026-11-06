@@ -21,8 +21,15 @@ const label = (v) =>
   v == null ? "" : typeof v === "object" ? v.name ?? v.title ?? v.label ?? "" : String(v);
 
 const toProject = (p = {}) => {
-  const rawBrief = p.brief || p.brief_url || p.project_brief || p.file || (Array.isArray(p.files) ? p.files[0]?.file : null) || (Array.isArray(p.documents) ? p.documents[0]?.file : null);
+  let briefUrl = p.brief || p.brief_url || p.project_brief || p.file;
   
+  if (!briefUrl && Array.isArray(p.files) && p.files.length > 0) {
+    briefUrl = p.files[0].file || p.files[0].url || p.files[0];
+  }
+  if (!briefUrl && Array.isArray(p.documents) && p.documents.length > 0) {
+    briefUrl = p.documents[0].file || p.documents[0].url || p.documents[0];
+  }
+
   return {
     ...p,
     title: p.title ?? p.name ?? "Untitled project",
@@ -38,8 +45,7 @@ const toProject = (p = {}) => {
     role: p.professional_role ?? p.role,
     tasks: p.tasks,
     deliverables: p.deliverables ?? p.required_deliverables,
-    brief: rawBrief,
-    briefName: typeof rawBrief === "string" ? rawBrief.split("/").pop() : "Project Brief"
+    brief: briefUrl,
   };
 };
 
