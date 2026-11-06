@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router";
 import { FiChevronLeft, FiChevronRight, FiFileText } from "react-icons/fi";
-import { useAdminData } from "../../context/AdminDataContext";
 
 const API_BASE = "https://project-finder-q5t2.onrender.com/api";
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}` });
@@ -81,12 +80,10 @@ function SubmissionFiles({ simulationId, onClose }) {
     const res = await fetch(`${API_BASE}/admin/simulations/${simulationId}/uploads/`, {
       headers: authHeaders(),
     });
-    
     if (res.ok) {
       const upData = await res.json();
       return listOf(upData);
     }
-
     return [];
   }, [simulationId]);
 
@@ -95,17 +92,14 @@ function SubmissionFiles({ simulationId, onClose }) {
       const res = await fetch(url);
       const blob = await res.blob();
       const objectUrl = window.URL.createObjectURL(blob);
-      
       const link = document.createElement("a");
       link.href = objectUrl;
       link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
       window.URL.revokeObjectURL(objectUrl);
     } catch (err) {
-      console.error("Download failed", err);
       window.open(url, "_blank");
     }
   };
@@ -116,21 +110,17 @@ function SubmissionFiles({ simulationId, onClose }) {
         <h4 className="font-semibold text-blue-900">Submitted Files</h4>
         <button onClick={onClose} className="text-xs text-blue-600 hover:underline">Close</button>
       </div>
-
       {loading && <p className="text-sm text-blue-600">Loading files…</p>}
       {error && <p className="text-sm text-red-600">{error}</p>}
-
       {!loading && data && data.length === 0 && (
         <p className="text-sm text-blue-600">No files uploaded.</p>
       )}
-
       {!loading && data && data.length > 0 && (
         <ul className="space-y-2">
           {data.map((f, i) => {
             const filename = f.filename || f.name || f.file?.split("/").pop() || "Document";
             const size = f.size_kb ? `(${f.size_kb} KB)` : "";
             const url = f.file || f.url;
-
             return (
               <li key={f.id || i} className="flex items-center justify-between rounded bg-white p-3 text-sm shadow-sm">
                 <div className="flex items-center gap-2 truncate">
@@ -140,7 +130,6 @@ function SubmissionFiles({ simulationId, onClose }) {
                   </span>
                   {size && <span className="text-xs text-slate-400">{size}</span>}
                 </div>
-                
                 {url && (
                   <button 
                     type="button"
@@ -161,7 +150,6 @@ function SubmissionFiles({ simulationId, onClose }) {
 
 function SubmissionsTable({ rows }) {
   const [expandedRow, setExpandedRow] = useState(null);
-
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[720px] border-collapse text-left">
@@ -318,19 +306,9 @@ function Field({ label: text, children }) {
 
 export function UserProfilePage() {
   const { userId } = useParams();
-  const { users } = useAdminData();
 
   const { data, loading, error } = useFetch(async () => {
-    const [profile, sims] = await Promise.all([
-      getJson(userUrl(userId)).catch(() => null),
-      getJson(SUBMISSIONS_URL).catch(() => ({ results: [] })),
-    ]);
-
-    let finalProfile = profile;
-    if (!finalProfile) {
-      finalProfile = users.find((u) => String(u.id) === String(userId));
-    }
-
+    const sims = await getJson(SUBMISSIONS_URL).catch(() => ({ results: [] }));
     const raw = listOf(sims);
 
     const mine = raw.filter((s) => {
@@ -341,13 +319,17 @@ export function UserProfilePage() {
       return String(ownerId) === String(userId);
     });
 
-    const embedded = mine.find((s) => s.user && typeof s.user === "object")?.user;
-    
-    return { 
-      profile: finalProfile ?? embedded ?? null, 
-      simulations: mine.map(toRow) 
-    };
-  }, [userId, users]);
+    let userDetails = null;
+    if (mine.length > 0 && mine[0].user && typeof mine[0].user === "object") {
+      userDetails = mine[0].user;
+    }
+
+    if (!userDetails) {
+      userDetails = await getJson(userUrl(userId)).catch(() => null);
+    }
+
+    return { profile: userDetails, simulations: mine.map(toRow) };
+  }, [userId]);
 
   if (loading) {
     return (
@@ -357,19 +339,12 @@ export function UserProfilePage() {
     );
   }
 
-  if (error) {
-    return (
-      <Page title="User Profile">
-        <p className="text-red-700">Couldn't load this profile. {error}</p>
-      </Page>
-    );
-  }
+  const { profile: u, simulations } = data || {};
 
-  const { profile: u, simulations } = data;
-  if (!u && !simulations.length) {
+  if (!u) {
     return (
       <Page title="User Profile">
-        <p className={MUTED}>No details found for this user.</p>
+        <p className={MUTED}>User details not found. They may not have started any simulations.</p>
         <Link to="/admin/users" className="mt-4 inline-block text-blue-600 hover:underline">
           &larr; Back to Users
         </Link>
@@ -377,14 +352,14 @@ export function UserProfilePage() {
     );
   }
 
-  const joined = u?.date_joined ?? u?.registered_at ?? u?.created_at;
+  const joined = u.date_joined || u.created_at || u.registration_date;
   const registered = joined
     ? new Date(joined).toLocaleDateString("en-GB", {
         day: "numeric",
         month: "long",
         year: "numeric",
       })
-    : "";
+    : "—";
 
   return (
     <Page title="User Profile">
@@ -396,11 +371,11 @@ export function UserProfilePage() {
 
       <div className="max-w-2xl rounded-2xl bg-white p-6 shadow-sm">
         <Field label="Full Name">{personName(u)}</Field>
-        <Field label="Email">{u?.email}</Field>
-        <Field label="Professional Role">{label(u?.professional_role ?? u?.role)}</Field>
+        <Field label="Email">{u.email || "—"}</Field>
+        <Field label="Professional Role">{label(u.professional_role || u.role) || "—"}</Field>
         <Field label="Registration Date">{registered}</Field>
         <Field label="Simulation History">
-          <SimulationHistory simulations={simulations} />
+          <SimulationHistory simulations={simulations || []} />
         </Field>
       </div>
     </Page>

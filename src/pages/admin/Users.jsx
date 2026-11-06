@@ -8,7 +8,6 @@ const PAGE_SIZE = 5;
 const normalizeUser = (u, submissionsByUser) => {
   const rawDate = u.date_joined || u.created_at || u.registration_date || u.registered_at;
   
-  
   let formattedDate = "-";
   if (rawDate) {
     const d = new Date(rawDate);
