@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router";
 import { FiChevronLeft, FiChevronRight, FiFileText } from "react-icons/fi";
+import { useAdminData } from "../../context/AdminDataContext";
 
 const API_BASE = "https://project-finder-q5t2.onrender.com/api";
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}` });
@@ -26,25 +27,37 @@ const label = (v) =>
 
 const personName = (u) => {
   if (!u) return "";
-  if (typeof u !== "string" && typeof u !== "object") return String(u);
   if (typeof u === "string") return u;
+  if (typeof u !== "object") return String(u);
   const full = [u.first_name, u.last_name].filter(Boolean).join(" ");
   return u.full_name ?? u.name ?? (full || u.username) ?? u.email ?? "";
 };
 
 const countOf = (v) => (Array.isArray(v) ? v.length : Number(v) || 0);
 
-function toRow(s) {
+
+const idOf = (u) => (u && typeof u === "object" ? u.id ?? u.pk ?? u.user_id ?? null : null);
+
+
+const ownerIdOf = (s) => {
   const who = s.user ?? s.student ?? s.owner;
+  if (who && typeof who === "object") return idOf(who);
+  return who ?? s.user_id ?? s.student_id ?? null;
+};
+
+const sameId = (a, b) => a != null && b != null && String(a) === String(b);
+
+function toRow(s) {
   const project = s.project;
   return {
     id: s.id,
-    userId:
-      (typeof who === "object" ? who?.id : null) ??
-      s.user_id ??
-      s.student_id ??
-      (typeof who === "number" ? who : null),
-    user: personName(who) || s.user_name || s.user_email || s.email || "Unknown user",
+    userId: ownerIdOf(s),
+    user:
+      personName(s.user ?? s.student ?? s.owner) ||
+      s.user_name ||
+      s.user_email ||
+      s.email ||
+      "Unknown user",
     project: s.project_title ?? label(project) ?? s.title ?? "—",
     industry: label(s.industry ?? project?.industry),
     difficulty: label(s.difficulty_level ?? s.difficulty ?? project?.difficulty_level),
@@ -55,19 +68,27 @@ function toRow(s) {
 
 function useFetch(fn, deps) {
   const [state, setState] = useState({ data: null, loading: true, error: null });
+
   useEffect(() => {
     let cancelled = false;
-    setState((s) => ({ ...s, loading: true, error: null }));
+    setState({ data: null, loading: true, error: null }); 
+
     fn()
-      .then((data) => !cancelled && setState({ data, loading: false, error: null }))
-      .catch((e) => !cancelled && setState({ data: null, loading: false, error: e.message }));
+      .then((data) => {
+        if (!cancelled) setState({ data, loading: false, error: null });
+      })
+      .catch((e) => {
+        if (!cancelled) setState({ data: null, loading: false, error: e.message });
+      });
+
     return () => {
       cancelled = true;
     };
+
   }, deps);
+
   return state;
 }
-
 const Page = ({ title, children }) => (
   <section className={`min-h-full bg-[#edf3f1] p-5 sm:p-8 ${NAVY}`}>
     <h1 className="mb-6 text-3xl font-semibold">{title}</h1>
@@ -80,11 +101,7 @@ function SubmissionFiles({ simulationId, onClose }) {
     const res = await fetch(`${API_BASE}/admin/simulations/${simulationId}/uploads/`, {
       headers: authHeaders(),
     });
-    if (res.ok) {
-      const upData = await res.json();
-      return listOf(upData);
-    }
-    return [];
+    return res.ok ? listOf(await res.json()) : [];
   }, [simulationId]);
 
   const handleDownload = async (url, filename) => {
@@ -92,49 +109,60 @@ function SubmissionFiles({ simulationId, onClose }) {
       const res = await fetch(url);
       const blob = await res.blob();
       const objectUrl = window.URL.createObjectURL(blob);
+
       const link = document.createElement("a");
       link.href = objectUrl;
       link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+
       window.URL.revokeObjectURL(objectUrl);
     } catch (err) {
+      console.error("Download failed", err);
       window.open(url, "_blank");
     }
   };
 
   return (
     <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
-      <div className="flex justify-between items-center mb-2">
+      <div className="mb-2 flex items-center justify-between">
         <h4 className="font-semibold text-blue-900">Submitted Files</h4>
-        <button onClick={onClose} className="text-xs text-blue-600 hover:underline">Close</button>
+        <button onClick={onClose} className="text-xs text-blue-600 hover:underline">
+          Close
+        </button>
       </div>
+
       {loading && <p className="text-sm text-blue-600">Loading files…</p>}
       {error && <p className="text-sm text-red-600">{error}</p>}
+
       {!loading && data && data.length === 0 && (
         <p className="text-sm text-blue-600">No files uploaded.</p>
       )}
+
       {!loading && data && data.length > 0 && (
         <ul className="space-y-2">
           {data.map((f, i) => {
             const filename = f.filename || f.name || f.file?.split("/").pop() || "Document";
             const size = f.size_kb ? `(${f.size_kb} KB)` : "";
             const url = f.file || f.url;
+
             return (
-              <li key={f.id || i} className="flex items-center justify-between rounded bg-white p-3 text-sm shadow-sm">
+              <li
+                key={f.id || i}
+                className="flex items-center justify-between rounded bg-white p-3 text-sm shadow-sm"
+              >
                 <div className="flex items-center gap-2 truncate">
-                  <FiFileText className="text-blue-500 shrink-0" />
-                  <span className="font-medium text-slate-700 truncate">
-                    {filename}
-                  </span>
+                  <FiFileText className="shrink-0 text-blue-500" />
+                  <span className="truncate font-medium text-slate-700">{filename}</span>
                   {size && <span className="text-xs text-slate-400">{size}</span>}
                 </div>
+
                 {url && (
-                  <button 
+                  <button
                     type="button"
                     onClick={() => handleDownload(url, filename)}
-                    className="text-xs font-semibold text-[#15803D] hover:underline ml-4 shrink-0"
+                    className="ml-4 shrink-0 text-xs font-semibold text-[#15803D] hover:underline"
                   >
                     Download
                   </button>
@@ -148,15 +176,19 @@ function SubmissionFiles({ simulationId, onClose }) {
   );
 }
 
+
 function SubmissionsTable({ rows }) {
   const [expandedRow, setExpandedRow] = useState(null);
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[720px] border-collapse text-left">
         <thead>
           <tr>
             {["User", "Project", "Industry", "Difficulty", "Status", "Uploads"].map((h) => (
-              <th key={h} className="px-3 py-3.5 font-medium">{h}</th>
+              <th key={h} className="px-3 py-3.5 font-medium">
+                {h}
+              </th>
             ))}
           </tr>
         </thead>
@@ -202,6 +234,7 @@ function SubmissionsTable({ rows }) {
 export function SubmissionsPage() {
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
+
   const { data, loading, error } = useFetch(
     async () => listOf(await getJson(SUBMISSIONS_URL)).map(toRow),
     []
@@ -235,7 +268,9 @@ export function SubmissionsPage() {
         >
           <option value="">Filter by: All</option>
           {statuses.map((s) => (
-            <option key={s} value={s}>{s}</option>
+            <option key={s} value={s}>
+              {s}
+            </option>
           ))}
         </select>
       </div>
@@ -258,7 +293,9 @@ export function SubmissionsPage() {
           >
             <FiChevronLeft aria-hidden="true" /> Previous
           </button>
-          <span>{page} / {pages}</span>
+          <span>
+            {page} / {pages}
+          </span>
           <button
             type="button"
             className={pagerBtn}
@@ -273,16 +310,24 @@ export function SubmissionsPage() {
   );
 }
 
+
 function SimulationHistory({ simulations }) {
   if (!simulations.length) return <p className={MUTED}>No simulations started yet</p>;
+
   return (
     <ul className="grid gap-3">
       {simulations.map((s) => (
-        <li key={s.id} className="flex flex-wrap justify-between gap-4 rounded-lg bg-white px-4 py-3.5 shadow-sm">
+        <li
+          key={s.id}
+          className="flex flex-wrap justify-between gap-4 rounded-lg bg-white px-4 py-3.5 shadow-sm"
+        >
           <div>
             <span className={`font-semibold ${NAVY}`}>{s.project}</span>
             <span className={MUTED}>
-              {[s.industry, s.difficulty].filter(Boolean).map((t) => ` · ${t}`).join("")}
+              {[s.industry, s.difficulty]
+                .filter(Boolean)
+                .map((t) => ` · ${t}`)
+                .join("")}
             </span>
           </div>
           <div className={`flex gap-4 text-sm ${MUTED}`}>
@@ -305,31 +350,42 @@ function Field({ label: text, children }) {
 }
 
 export function UserProfilePage() {
-  const { userId } = useParams();
+  const { userId } = useParams(); 
+  const { users } = useAdminData();
 
   const { data, loading, error } = useFetch(async () => {
-    const sims = await getJson(SUBMISSIONS_URL).catch(() => ({ results: [] }));
-    const raw = listOf(sims);
+    if (!userId) return { fetched: null, sims: [] };
 
-    const mine = raw.filter((s) => {
-      const ownerId =
-        (s.user && typeof s.user === "object" ? s.user.id : s.user) ??
-        s.user_id ??
-        s.student_id;
-      return String(ownerId) === String(userId);
-    });
+    const [fetched, sims] = await Promise.all([
+      getJson(userUrl(userId)).catch(() => null),
+      getJson(SUBMISSIONS_URL).catch(() => ({ results: [] })),
+    ]);
 
-    let userDetails = null;
-    if (mine.length > 0 && mine[0].user && typeof mine[0].user === "object") {
-      userDetails = mine[0].user;
-    }
-
-    if (!userDetails) {
-      userDetails = await getJson(userUrl(userId)).catch(() => null);
-    }
-
-    return { profile: userDetails, simulations: mine.map(toRow) };
+    return {
+      
+      fetched: sameId(idOf(fetched), userId) ? fetched : null,
+      sims: listOf(sims),
+    };
   }, [userId]);
+
+  
+  const simulations = useMemo(
+    () => (data?.sims ?? []).filter((s) => sameId(ownerIdOf(s), userId)).map(toRow),
+    [data, userId]
+  );
+
+  const profile = useMemo(() => {
+    if (!data) return null;
+
+    const fromContext = (users ?? []).find((u) => sameId(idOf(u), userId));
+
+    const embedded = (data.sims ?? [])
+      .filter((s) => sameId(ownerIdOf(s), userId))
+      .map((s) => s.user ?? s.student ?? s.owner)
+      .find((u) => u && typeof u === "object");
+
+    return data.fetched ?? fromContext ?? embedded ?? null;
+  }, [data, users, userId]);
 
   if (loading) {
     return (
@@ -339,12 +395,18 @@ export function UserProfilePage() {
     );
   }
 
-  const { profile: u, simulations } = data || {};
-
-  if (!u) {
+  if (error) {
     return (
       <Page title="User Profile">
-        <p className={MUTED}>User details not found. They may not have started any simulations.</p>
+        <p className="text-red-700">Couldn't load this profile. {error}</p>
+      </Page>
+    );
+  }
+
+  if (!profile && simulations.length === 0) {
+    return (
+      <Page title="User Profile">
+        <p className={MUTED}>No details found for this user.</p>
         <Link to="/admin/users" className="mt-4 inline-block text-blue-600 hover:underline">
           &larr; Back to Users
         </Link>
@@ -352,14 +414,14 @@ export function UserProfilePage() {
     );
   }
 
-  const joined = u.date_joined || u.created_at || u.registration_date;
+  const joined = profile?.date_joined ?? profile?.registered_at ?? profile?.created_at;
   const registered = joined
     ? new Date(joined).toLocaleDateString("en-GB", {
         day: "numeric",
         month: "long",
         year: "numeric",
       })
-    : "—";
+    : "";
 
   return (
     <Page title="User Profile">
@@ -370,12 +432,14 @@ export function UserProfilePage() {
       </div>
 
       <div className="max-w-2xl rounded-2xl bg-white p-6 shadow-sm">
-        <Field label="Full Name">{personName(u)}</Field>
-        <Field label="Email">{u.email || "—"}</Field>
-        <Field label="Professional Role">{label(u.professional_role || u.role) || "—"}</Field>
+        <Field label="Full Name">{personName(profile)}</Field>
+        <Field label="Email">{profile?.email}</Field>
+        <Field label="Professional Role">
+          {label(profile?.professional_role ?? profile?.role)}
+        </Field>
         <Field label="Registration Date">{registered}</Field>
         <Field label="Simulation History">
-          <SimulationHistory simulations={simulations || []} />
+          <SimulationHistory simulations={simulations} />
         </Field>
       </div>
     </Page>

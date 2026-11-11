@@ -5,23 +5,23 @@ import { useAdminData } from "../../context/AdminDataContext";
 
 const PAGE_SIZE = 5;
 
-const normalizeUser = (u, submissionsByUser) => {
+
+const idOf = (u) => u?.id ?? u?.pk ?? u?.user_id ?? null;
+
+const normalizeUser = (u, submissionsByUser = {}) => {
+  const id = idOf(u);
   const rawDate = u.date_joined || u.created_at || u.registration_date || u.registered_at;
-  
+
   let formattedDate = "-";
   if (rawDate) {
     const d = new Date(rawDate);
-    if (!Number.isNaN(d.getTime())) {
-      formattedDate = d.toLocaleDateString("en-GB", {
-        day: "numeric", month: "long", year: "numeric",
-      });
-    } else {
-      formattedDate = rawDate;
-    }
+    formattedDate = Number.isNaN(d.getTime())
+      ? String(rawDate)
+      : d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
   }
 
   return {
-    id: u.id,
+    id,
     name:
       u.full_name ||
       u.name ||
@@ -38,16 +38,13 @@ const normalizeUser = (u, submissionsByUser) => {
       u.started_count ??
       u.total_simulations ??
       0,
-    submissions: 
-      submissionsByUser[u.id] ?? 
-      u.submissions_count ?? 
-      u.total_submissions ?? 
-      0,
+    submissions:
+      submissionsByUser[id] ?? u.submissions_count ?? u.total_submissions ?? 0,
   };
 };
 
 const Users = () => {
-  const { users, submissionsByUser, loading, error } = useAdminData();
+  const { users = [], submissionsByUser = {}, loading, error } = useAdminData();
   const [search, setSearch] = useState("");
   const [role, setRole] = useState("");
   const [page, setPage] = useState(1);
@@ -125,7 +122,9 @@ const Users = () => {
           >
             <option value="">Filter by</option>
             {roles.map((r) => (
-              <option key={r} value={r}>{r}</option>
+              <option key={r} value={r}>
+                {r}
+              </option>
             ))}
           </select>
           <MdOutlineKeyboardArrowDown size={18} />
@@ -161,15 +160,19 @@ const Users = () => {
                   </td>
                 </tr>
               ) : (
-                visible.map((u) => (
-                  <tr key={u.id}>
+                visible.map((u, i) => (
+                  <tr key={u.id ?? `${u.email}-${i}`}>
                     <td className={`${td} font-semibold`}>
-                      <Link
-                        to={`/admin/users/${u.id}`}
-                        className="text-[#17355f] hover:text-blue-600 hover:underline"
-                      >
-                        {u.name || u.email}
-                      </Link>
+                      {u.id != null ? (
+                        <Link
+                          to={`/admin/users/${u.id}`}
+                          className="text-[#17355f] hover:text-blue-600 hover:underline"
+                        >
+                          {u.name || u.email}
+                        </Link>
+                      ) : (
+                        u.name || u.email
+                      )}
                     </td>
                     <td className={td}>{u.email}</td>
                     <td className={td}>{u.role || "—"}</td>

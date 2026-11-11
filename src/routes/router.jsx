@@ -20,8 +20,12 @@ import ProjectForm from "../pages/admin/ProjectForm";
 import MySimulations from "../pages/MySimulations";
 import ResetPassword from "../pages/ResetPassword";
 import VerifyEmail from "../pages/VerifyEmail";
+import LandingPage from "../pages/LandingPage";
+
 const router = createBrowserRouter([
-  { path: "/", element: <Navigate to="/login" replace /> },
+  
+  { path: "/", element: <LandingPage /> },
+
 
   {
     element: <GuestRoute />,
@@ -32,15 +36,15 @@ const router = createBrowserRouter([
           { path: "/login", element: <Login /> },
           { path: "/signup", element: <SignUp /> },
           { path: "/reset-password", element: <ResetPassword /> },
-          { path: "/verify-email", element: <VerifyEmail /> },
           { path: "/reset-password/:uid/:token", element: <ResetPassword /> },
-{ path: "/verify-email/:key", element: <VerifyEmail /> },
+          { path: "/verify-email", element: <VerifyEmail /> },
+          { path: "/verify-email/:key", element: <VerifyEmail /> },
         ],
       },
     ],
   },
 
-  
+
   {
     element: <ProtectedRoute />,
     children: [
@@ -55,14 +59,14 @@ const router = createBrowserRouter([
           { path: "/edited-profile", element: <EditedProfile /> },
           { path: "/profile", element: <Profile /> },
           { path: "/my-simulations", element: <MySimulations /> },
-
         ],
       },
     ],
   },
 
+  
   {
-    element: <ProtectedRoute adminOnly />, 
+    element: <ProtectedRoute adminOnly />,
     children: [
       {
         path: "/admin",
@@ -73,10 +77,9 @@ const router = createBrowserRouter([
           { path: "users/:userId", element: <UserProfilePage /> },
           { path: "submissions", element: <Submissions /> },
           { path: "simulation-projects", element: <Simulationprojects /> },
+          { path: "simulation-projects/new", element: <ProjectForm /> },
+          { path: "simulation-projects/:id/edit", element: <ProjectForm /> },
           { path: "profile", element: <AdminProfile /> },
-          { path: "simulation-projects", element: <Simulationprojects /> },
-{ path: "simulation-projects/new", element: <ProjectForm /> },
-{ path: "simulation-projects/:id/edit", element: <ProjectForm /> },
         ],
       },
     ],

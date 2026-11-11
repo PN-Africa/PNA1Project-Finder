@@ -1,9 +1,14 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useParams, Link } from "react-router";
-import { FiUploadCloud, FiFileText, FiArrowLeft, FiCheck, FiDownload } from "react-icons/fi";
+import { FiUploadCloud, FiFileText, FiArrowLeft, FiCheck, FiDownload, FiTrash2, FiRefreshCw } from "react-icons/fi";
 import ConfirmModal from "../components/user/ConfirmModal";
-import FileMenu from "../components/user/FileMenu";
-import { getSimulation, getProject, submitSimulation } from "../../src/utils/simulation";
+import {
+  getSimulation,
+  getProject,
+  uploadSimulationFile,
+  deleteSimulationFile,
+  submitSimulation,
+} from "../../src/utils/simulation";
 
 const MAX_SIZE = 10 * 1024 * 1024;
 const ALLOWED = [".pdf", ".docx", ".xlsx"];
@@ -20,34 +25,22 @@ const getTimeLeft = (end) => {
 const label = (v) =>
   v == null ? "" : typeof v === "object" ? v.name ?? v.title ?? v.label ?? "" : String(v);
 
-const toProject = (p = {}) => {
-  let briefUrl = p.brief || p.brief_url || p.project_brief || p.file;
-  
-  if (!briefUrl && Array.isArray(p.files) && p.files.length > 0) {
-    briefUrl = p.files[0].file || p.files[0].url || p.files[0];
-  }
-  if (!briefUrl && Array.isArray(p.documents) && p.documents.length > 0) {
-    briefUrl = p.documents[0].file || p.documents[0].url || p.documents[0];
-  }
-
-  return {
-    ...p,
-    title: p.title ?? p.name ?? "Untitled project",
-    industry: label(p.industry),
-    difficulty: label(p.difficulty_level ?? p.difficulty ?? p.level),
-    validity: p.validity,
-    validityDays: p.validityDays ?? p.validity_days ?? 90,
-    scenario: p.scenario_description ?? p.scenario,
-    businessProblem: p.business_problem ?? p.businessProblem,
-    objective: p.objective ?? p.objectives,
-    stakeholders: p.stakeholders,
-    context: p.context,
-    role: p.professional_role ?? p.role,
-    tasks: p.tasks,
-    deliverables: p.deliverables ?? p.required_deliverables,
-    brief: briefUrl,
-  };
-};
+const toProject = (p = {}) => ({
+  ...p,
+  title: p.title ?? p.name ?? "Untitled project",
+  industry: label(p.industry),
+  difficulty: label(p.difficulty_level ?? p.difficulty ?? p.level),
+  validityDays: p.duration_in_days ?? p.validityDays ?? p.validity_days ?? 0,
+  scenario: p.scenario_description ?? p.scenario,
+  businessProblem: p.business_problem ?? p.businessProblem,
+  objective: p.objective ?? p.objectives,
+  stakeholders: p.stakeholders,
+  context: p.context,
+  role: p.professional_role ?? p.role,
+  tasks: p.tasks,
+  deliverables: p.deliverables ?? p.required_deliverables,
+  brief: p.brief || p.brief_url || p.project_brief,
+});
 
 const Section = ({ title, children }) => (
   <section className="mt-6">
@@ -66,6 +59,9 @@ const Simulation = () => {
 
   const [files, setFiles] = useState([]);
   const [uploadError, setUploadError] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [replacingId, setReplacingId] = useState(null);
+
   const [submitted, setSubmitted] = useState(false);
   const [submittedDate, setSubmittedDate] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -74,7 +70,7 @@ const Simulation = () => {
   const [timeLeft, setTimeLeft] = useState(null);
 
   const inputRef = useRef(null);
-  const replaceIndex = useRef(null);
+  const replaceTargetId = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -93,20 +89,21 @@ const Simulation = () => {
 
         const isSubmitted = String(sim.status ?? "").toLowerCase().includes("submit");
         setSubmitted(isSubmitted);
-        
+
         if (isSubmitted) {
           const dateStr = sim.submitted_at ?? sim.updated_at ?? sim.created_at;
           setSubmittedDate(
             dateStr
               ? new Date(dateStr).toLocaleString("en-GB", {
                   day: "numeric", month: "short", year: "numeric",
-                  hour: "2-digit", minute: "2-digit"
+                  hour: "2-digit", minute: "2-digit",
                 })
               : ""
           );
-          if (Array.isArray(sim.files) || Array.isArray(sim.uploads)) {
-            setFiles(sim.files ?? sim.uploads);
-          }
+        }
+
+        if (Array.isArray(sim.files) || Array.isArray(sim.uploads)) {
+          setFiles(sim.files ?? sim.uploads);
         }
 
         const start = Date.parse(sim.started_at ?? sim.created_at ?? sim.created ?? "");
@@ -122,52 +119,76 @@ const Simulation = () => {
 
   useEffect(() => {
     if (!project || !startedAt || submitted) return;
-    const end = startedAt + (project.validityDays || 90) * 86400000;
+    const days = project.validityDays || 0;
+    if (!days) return;
+    
+    const end = startedAt + days * 86400000;
     const update = () => setTimeLeft(getTimeLeft(end));
     update();
     const timer = setInterval(update, 60000);
     return () => clearInterval(timer);
   }, [project, startedAt, submitted]);
 
-  const openPicker = (index = null) => {
-    replaceIndex.current = index;
+  const openPicker = (uploadId = null) => {
+    replaceTargetId.current = uploadId;
     inputRef.current.click();
   };
 
-  const handleFiles = (e) => {
+  const handleFiles = async (e) => {
     const selectedFiles = Array.from(e.target.files);
+    e.target.value = "";
     if (selectedFiles.length === 0) return;
 
-    const valid = [];
-    let err = "";
+    setUploadError("");
+    setUploading(true);
 
-    selectedFiles.forEach((f) => {
-      const ext = "." + f.name.split(".").pop().toLowerCase();
-      if (!ALLOWED.includes(ext)) {
-        err = `${f.name}: only PDF, DOCX or XLSX files are allowed`;
-      } else if (f.size > MAX_SIZE) {
-        err = `${f.name} is larger than 10MB`;
-      } else {
-        valid.push(f);
+    const replaceId = replaceTargetId.current;
+    replaceTargetId.current = null;
+
+    try {
+      for (const f of selectedFiles) {
+        const ext = "." + f.name.split(".").pop().toLowerCase();
+        if (!ALLOWED.includes(ext)) {
+          setUploadError(`${f.name}: only PDF, DOCX or XLSX files are allowed`);
+          continue;
+        }
+        if (f.size > MAX_SIZE) {
+          setUploadError(`${f.name} is larger than 10MB`);
+          continue;
+        }
+
+        if (replaceId) {
+          setReplacingId(replaceId);
+          await deleteSimulationFile(id, replaceId);
+          const newUpload = await uploadSimulationFile(id, f);
+          setFiles((prev) =>
+            prev.map((x) => (x.id === replaceId ? { ...newUpload, name: f.name } : x))
+          );
+          setReplacingId(null);
+        } else {
+          const newUpload = await uploadSimulationFile(id, f);
+          setFiles((prev) => [...prev, { ...newUpload, name: f.name }]);
+        }
       }
-    });
-
-    setUploadError(err);
-
-    if (valid.length > 0) {
-      if (replaceIndex.current !== null) {
-        const index = replaceIndex.current;
-        setFiles((prev) => prev.map((f, i) => (i === index ? valid[0] : f)));
-      } else {
-        setFiles((prev) => [...prev, ...valid]);
-      }
+    } catch (err) {
+      setUploadError(err.message || "Upload failed. Please try again.");
+    } finally {
+      setUploading(false);
     }
-    
-    replaceIndex.current = null;
-    e.target.value = "";
   };
 
-  const removeFile = (index) => setFiles((prev) => prev.filter((_, i) => i !== index));
+  const removeFile = async (uploadId) => {
+    if (!uploadId) {
+      setFiles((prev) => prev.filter((f) => f.id !== uploadId));
+      return;
+    }
+    try {
+      await deleteSimulationFile(id, uploadId);
+      setFiles((prev) => prev.filter((f) => f.id !== uploadId));
+    } catch (err) {
+      setUploadError(err.message || "Could not delete file.");
+    }
+  };
 
   const handleSubmitClick = () => {
     if (files.length === 0) return;
@@ -181,12 +202,12 @@ const Simulation = () => {
     setSubmitError("");
 
     try {
-      await submitSimulation(id, files);
+      await submitSimulation(id);
       setSubmitted(true);
       setSubmittedDate(
         new Date().toLocaleString("en-GB", {
           day: "numeric", month: "short", year: "numeric",
-          hour: "2-digit", minute: "2-digit"
+          hour: "2-digit", minute: "2-digit",
         })
       );
     } catch (e) {
@@ -210,7 +231,7 @@ const Simulation = () => {
   }
 
   return (
-    <div className="mx-auto max-w-3xl p-6 pb-20">
+    <div className="m-6 max-w-3xl pb-20">
       <h1 className="text-2xl font-bold text-[#17324D]">{project.title}</h1>
       <p className="mt-1 text-xs text-slate-500">
         {project.industry} · {project.difficulty}
@@ -251,7 +272,7 @@ const Simulation = () => {
       )}
 
       {project.scenario && <Section title="Scenario">{project.scenario}</Section>}
-      
+
       {project.businessProblem && (
         <Section title="Business Problem">
           <p className="italic">{project.businessProblem}</p>
@@ -267,9 +288,7 @@ const Simulation = () => {
       {Array.isArray(project.stakeholders) && project.stakeholders.length > 0 && (
         <Section title="Stakeholders / Team">
           <ul className="list-disc pl-5">
-            {project.stakeholders.map((s, i) => (
-              <li key={i}>{label(s)}</li>
-            ))}
+            {project.stakeholders.map((s, i) => <li key={i}>{label(s)}</li>)}
           </ul>
         </Section>
       )}
@@ -280,9 +299,7 @@ const Simulation = () => {
       {Array.isArray(project.tasks) && project.tasks.length > 0 && (
         <Section title="Tasks">
           <ol className="list-decimal pl-5">
-            {project.tasks.map((t, i) => (
-              <li key={i}>{label(t) || String(t)}</li>
-            ))}
+            {project.tasks.map((t, i) => <li key={i}>{label(t) || String(t)}</li>)}
           </ol>
         </Section>
       )}
@@ -290,9 +307,7 @@ const Simulation = () => {
       {Array.isArray(project.deliverables) && project.deliverables.length > 0 && (
         <Section title="Required Deliverables">
           <ul className="list-disc pl-5">
-            {project.deliverables.map((d, i) => (
-              <li key={i}>{label(d) || String(d)}</li>
-            ))}
+            {project.deliverables.map((d, i) => <li key={i}>{label(d) || String(d)}</li>)}
           </ul>
         </Section>
       )}
@@ -311,10 +326,13 @@ const Simulation = () => {
           <button
             type="button"
             onClick={() => openPicker(null)}
-            className="flex w-full flex-col items-center gap-1 rounded-lg border border-slate-200 bg-white px-4 py-6 text-center hover:bg-slate-50"
+            disabled={uploading}
+            className="flex w-full flex-col items-center gap-1 rounded-lg border border-slate-200 bg-white px-4 py-6 text-center hover:bg-slate-50 disabled:opacity-60"
           >
             <FiUploadCloud size={22} className="text-slate-500" />
-            <span className="text-sm text-slate-700">Upload a document</span>
+            <span className="text-sm text-slate-700">
+              {uploading ? "Uploading…" : "Upload a document"}
+            </span>
             <span className="text-xs text-slate-400">PDF, DOCX or XLSX · Max 10MB</span>
           </button>
         )}
@@ -322,25 +340,43 @@ const Simulation = () => {
         {uploadError && <p className="mt-2 text-xs text-red-600">{uploadError}</p>}
 
         <ul className="mt-3 space-y-2">
-          {files.map((f, i) => (
-            <li
-              key={(f.name || f.id || "") + i}
-              className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2"
-            >
-              <span className="flex min-w-0 items-center gap-2">
-                <FiFileText className="shrink-0 text-slate-500" />
-                <span className="truncate text-xs">{f.name || f.file?.split("/").pop() || f.filename || "Document"}</span>
-              </span>
-              {!submitted && (
-                <FileMenu
-                  file={f}
-                  submitted={submitted}
-                  onReplace={() => openPicker(i)}
-                  onDelete={() => removeFile(i)}
-                />
-              )}
-            </li>
-          ))}
+          {files.map((f, i) => {
+            const isReplacing = replacingId && replacingId === f.id;
+            const fileName = f.name || f.filename || f.file?.split("/").pop() || "Document";
+            return (
+              <li
+                key={f.id || fileName + i}
+                className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2"
+              >
+                <span className="flex min-w-0 items-center gap-2">
+                  <FiFileText className="shrink-0 text-slate-500" />
+                  <span className="truncate text-xs">{fileName}</span>
+                </span>
+                {!submitted && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => openPicker(f.id)}
+                      disabled={isReplacing || uploading}
+                      className="text-xs text-blue-600 hover:underline disabled:opacity-50"
+                      title="Replace file"
+                    >
+                      {isReplacing ? "Replacing…" : <FiRefreshCw size={14} />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeFile(f.id)}
+                      disabled={isReplacing || uploading}
+                      className="text-xs text-red-600 hover:underline disabled:opacity-50"
+                      title="Delete file"
+                    >
+                      <FiTrash2 size={14} />
+                    </button>
+                  </div>
+                )}
+              </li>
+            );
+          })}
         </ul>
       </Section>
 
@@ -349,7 +385,7 @@ const Simulation = () => {
           <button
             type="button"
             onClick={handleSubmitClick}
-            disabled={files.length === 0 || submitting}
+            disabled={files.length === 0 || submitting || uploading}
             className="rounded-md bg-[#2563EB] px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {submitting ? "Submitting…" : "Submit Simulation"}

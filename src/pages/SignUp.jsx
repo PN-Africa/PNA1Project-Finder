@@ -10,6 +10,65 @@ const inputBase =
   "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-[0.95rem] text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-600 focus:ring-[3px] focus:ring-blue-600/15 transition sm:text-base";
 const inputError = "border-red-600 focus:border-red-600 focus:ring-red-600/15";
 
+const EMPTY_FORM = {
+  fullName: "",
+  email: "",
+  password: "",
+  confirmPassword: "",
+  role: "",
+  otherCategory: "",
+};
+
+const EMPTY_ERRORS = { ...EMPTY_FORM };
+
+
+const validators = {
+  fullName: (v) => {
+    const name = v.trim();
+    if (!name) return "Full name is required";
+    if (name.split(/\s+/).length < 2) return "Enter your first and last name";
+    return "";
+  },
+  email: (v) => {
+    const email = v.trim();
+    if (!email) return "Email is required";
+    if (!emailRegex.test(email)) return "Invalid email format";
+    return "";
+  },
+  password: (v) => {
+    if (!v) return "Password is required";
+    if (v.length < 8) return "Password must be at least 8 characters";
+    if (/^\d+$/.test(v)) return "Password can't be only numbers";
+    return "";
+  },
+  confirmPassword: (v, f) => {
+    if (!v) return "Please confirm your password";
+    if (v !== f.password) return "Passwords do not match";
+    return "";
+  },
+  role: (v) => (v ? "" : "Select a role"),
+  otherCategory: (v, f) =>
+    f.role === "Others" && !v.trim() ? "Enter your professional role" : "",
+};
+
+const validateAll = (f) =>
+  Object.keys(validators).reduce(
+    (acc, key) => ({ ...acc, [key]: validators[key](f[key], f) }),
+    {}
+  );
+
+
+const SERVER_FIELD_MAP = {
+  username: "email",
+  email: "email",
+  password1: "password",
+  password2: "password",
+  password: "password",
+  first_name: "fullName",
+  last_name: "fullName",
+};
+
+const firstMessage = (v) => (Array.isArray(v) ? v.join(" ") : String(v));
 
 const maskEmail = (email) => {
   if (!email || !email.includes("@")) return email;
@@ -23,68 +82,34 @@ const SignUp = () => {
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState("");
   const [success, setSuccess] = useState(false);
-
-  const [form, setForm] = useState({
-    fullName: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-    role: "",
-    otherCategory: "",
-  });
-
-  const [errors, setErrors] = useState({
-    fullName: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-    role: "",
-    otherCategory: "",
-  });
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [errors, setErrors] = useState(EMPTY_ERRORS);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    const nextForm = { ...form, [name]: value };
+
+    
+    if (name === "role" && value !== "Others") nextForm.otherCategory = "";
+
+    setForm(nextForm);
 
     setErrors((prev) => {
       const next = { ...prev };
-      if (name === "email") {
-        next.email =
-          value === ""
-            ? "Email is required"
-            : !emailRegex.test(value)
-            ? "Invalid email format"
-            : "";
-      }
-      if (name === "fullName") {
-        next.fullName = value.trim() === "" ? "Full name is required" : "";
-      }
-      if (name === "password") {
-        next.password =
-          value === ""
-            ? "Password is required"
-            : value.length < 8
-            ? "Password must be at least 8 characters"
-            : "";
 
-        if (form.confirmPassword !== "") {
-          next.confirmPassword =
-            value !== form.confirmPassword ? "Passwords do not match" : "";
-        }
+      if (prev[name]) next[name] = validators[name](value, nextForm);
+
+      if (name === "password" && nextForm.confirmPassword) {
+        next.confirmPassword = validators.confirmPassword(nextForm.confirmPassword, nextForm);
       }
-      if (name === "confirmPassword") {
-        next.confirmPassword =
-          value === ""
-            ? "Please confirm your password"
-            : value !== form.password
-            ? "Passwords do not match"
-            : "";
-      }
-      if (name === "role") next.role = value === "" ? "Select a role" : "";
-      if (name === "otherCategory")
-        next.otherCategory = value === "" ? "Enter your professional role" : "";
+      if (name === "role" && value !== "Others") next.otherCategory = "";
       return next;
     });
+  };
+
+  const handleBlur = (e) => {
+    const { name, value } = e.target;
+    setErrors((prev) => ({ ...prev, [name]: validators[name](value, form) }));
   };
 
   const handleSubmit = async (e) => {
@@ -92,36 +117,14 @@ const SignUp = () => {
     setServerError("");
     setSuccess(false);
 
-    const nextErrors = {
-      fullName: form.fullName.trim() === "" ? "Full name is required" : "",
-      email:
-        form.email === ""
-          ? "Email is required"
-          : !emailRegex.test(form.email)
-          ? "Invalid email format"
-          : "",
-      password:
-        form.password === ""
-          ? "Password is required"
-          : form.password.length < 8
-          ? "Password must be at least 8 characters"
-          : "",
-      confirmPassword:
-        form.confirmPassword === ""
-          ? "Please confirm your password"
-          : form.confirmPassword !== form.password
-          ? "Passwords do not match"
-          : "",
-      role: form.role === "" ? "Select a role" : "",
-      otherCategory:
-        form.role === "Others" && form.otherCategory === ""
-          ? "Enter your professional role"
-          : "",
-    };
+    const nextErrors = validateAll(form);
     setErrors(nextErrors);
-    if (Object.values(nextErrors).some((m) => m !== "")) return;
+    if (Object.values(nextErrors).some(Boolean)) return;
 
+    const email = form.email.trim().toLowerCase();
     const [firstName, ...rest] = form.fullName.trim().split(/\s+/);
+    const professionalRole =
+      form.role === "Others" ? form.otherCategory.trim() : form.role;
 
     setLoading(true);
     try {
@@ -129,27 +132,40 @@ const SignUp = () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          username: form.email,
+          username: email,
           first_name: firstName,
           last_name: rest.join(" "),
-          email: form.email,
+          email,
           password1: form.password,
           password2: form.password,
+          
+          professional_role: professionalRole,
         }),
       });
       const data = await res.json().catch(() => ({}));
+
       if (!res.ok) {
-        setServerError(
-          data.username?.[0] ||
-            data.first_name?.[0] ||
-            data.last_name?.[0] ||
-            data.email?.[0] ||
-            data.password1?.[0] ||
-            data.password?.[0] ||
-            data.non_field_errors?.[0] ||
-            data.detail ||
-            "Registration failed. Please try again."
-        );
+      
+        const fieldErrors = { ...EMPTY_ERRORS };
+        let handled = false;
+        Object.entries(SERVER_FIELD_MAP).forEach(([serverKey, field]) => {
+          if (data[serverKey]) {
+            fieldErrors[field] = fieldErrors[field] || firstMessage(data[serverKey]);
+            handled = true;
+          }
+        });
+        if (data.professional_role) {
+          fieldErrors.role = firstMessage(data.professional_role);
+          handled = true;
+        }
+        if (handled) setErrors((prev) => ({ ...prev, ...fieldErrors }));
+
+        const general = data.non_field_errors?.[0] || data.detail;
+        if (general) {
+          setServerError(general);
+        } else if (!handled) {
+          setServerError("Registration failed. Please try again.");
+        }
         return;
       }
 
@@ -161,8 +177,22 @@ const SignUp = () => {
     }
   };
 
-  const errorText = (msg) =>
-    msg ? <p className="-mt-2 mb-3 text-[0.8rem] text-red-600">{msg}</p> : null;
+  const errorText = (id, msg) =>
+    msg ? (
+      <p id={`${id}-error`} role="alert" className="-mt-2 mb-3 text-[0.8rem] text-red-600">
+        {msg}
+      </p>
+    ) : null;
+
+  const fieldProps = (name) => ({
+    id: name,
+    name,
+    value: form[name],
+    onChange: handleChange,
+    onBlur: handleBlur,
+    "aria-invalid": errors[name] ? "true" : "false",
+    "aria-describedby": errors[name] ? `${name}-error` : undefined,
+  });
 
   return (
     <div className="mx-auto my-32 w-full max-w-[400px] rounded-xl bg-white px-7 py-8 text-center shadow-[0_2px_12px_rgba(15,31,61,0.08)] max-[480px]:px-5 max-[480px]:py-6">
@@ -181,40 +211,31 @@ const SignUp = () => {
           Full Name
         </label>
         <input
-          id="fullName"
+          {...fieldProps("fullName")}
           type="text"
-          name="fullName"
-          value={form.fullName}
           placeholder="Enter your full name"
-          onChange={handleChange}
           autoComplete="name"
           className={`${inputBase} mb-3.5 ${errors.fullName ? inputError : ""}`}
         />
-        {errorText(errors.fullName)}
+        {errorText("fullName", errors.fullName)}
 
         <label htmlFor="email" className="mb-1.5 text-sm font-medium text-slate-900">
           Email Address
         </label>
         <input
-          id="email"
+          {...fieldProps("email")}
           type="email"
-          name="email"
-          value={form.email}
           placeholder="you@example.com"
-          onChange={handleChange}
           autoComplete="email"
           className={`${inputBase} mb-3.5 ${errors.email ? inputError : ""}`}
         />
-        {errorText(errors.email)}
+        {errorText("email", errors.email)}
 
         <label htmlFor="role" className="mb-1.5 text-sm font-medium text-slate-900">
           Professional Role
         </label>
         <select
-          id="role"
-          name="role"
-          value={form.role}
-          onChange={handleChange}
+          {...fieldProps("role")}
           className={`${inputBase} mb-3.5 ${errors.role ? inputError : ""}`}
         >
           <option value="">Select your role</option>
@@ -228,7 +249,7 @@ const SignUp = () => {
           <option value="Business Analyst">Business Analyst</option>
           <option value="Others">Others</option>
         </select>
-        {errorText(errors.role)}
+        {errorText("role", errors.role)}
 
         {form.role === "Others" && (
           <>
@@ -239,15 +260,12 @@ const SignUp = () => {
               Specify your role
             </label>
             <input
-              id="otherCategory"
+              {...fieldProps("otherCategory")}
               type="text"
-              name="otherCategory"
-              value={form.otherCategory}
-              onChange={handleChange}
               placeholder="Enter your professional role"
               className={`${inputBase} mb-3.5 ${errors.otherCategory ? inputError : ""}`}
             />
-            {errorText(errors.otherCategory)}
+            {errorText("otherCategory", errors.otherCategory)}
           </>
         )}
 
@@ -256,11 +274,8 @@ const SignUp = () => {
         </label>
         <div className="relative mb-3.5">
           <input
-            id="password"
+            {...fieldProps("password")}
             type={showPassword ? "text" : "password"}
-            name="password"
-            value={form.password}
-            onChange={handleChange}
             autoComplete="new-password"
             placeholder="Create a password (min 8 characters)"
             className={`${inputBase} pr-10 ${errors.password ? inputError : ""}`}
@@ -274,7 +289,7 @@ const SignUp = () => {
             {showPassword ? <IoMdEyeOff size={18} /> : <IoMdEye size={18} />}
           </button>
         </div>
-        {errorText(errors.password)}
+        {errorText("password", errors.password)}
 
         <label
           htmlFor="confirmPassword"
@@ -283,21 +298,19 @@ const SignUp = () => {
           Confirm Password
         </label>
         <input
-          id="confirmPassword"
+          {...fieldProps("confirmPassword")}
           type={showPassword ? "text" : "password"}
-          name="confirmPassword"
-          value={form.confirmPassword}
-          onChange={handleChange}
           autoComplete="new-password"
           placeholder="Re-enter your password"
-          className={`${inputBase} mb-3.5 ${
-            errors.confirmPassword ? inputError : ""
-          }`}
+          className={`${inputBase} mb-3.5 ${errors.confirmPassword ? inputError : ""}`}
         />
-        {errorText(errors.confirmPassword)}
+        {errorText("confirmPassword", errors.confirmPassword)}
 
         {serverError && (
-          <div className="mb-3 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-left text-sm text-red-800">
+          <div
+            role="alert"
+            className="mb-3 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-left text-sm text-red-800"
+          >
             <p className="font-semibold">Registration failed</p>
             <p className="mt-1 text-red-700">{serverError}</p>
           </div>
@@ -307,7 +320,9 @@ const SignUp = () => {
           <div className="mb-3 rounded-md border border-green-300 bg-green-50 px-4 py-3 text-left text-sm text-green-800">
             <p className="font-semibold">Registration successful</p>
             <p className="mt-1 text-green-700">
-              We have sent a verification link to <strong>{maskEmail(form.email)}</strong>. Please check your inbox and click the link to activate your account.
+              We have sent a verification link to{" "}
+              <strong>{maskEmail(form.email.trim().toLowerCase())}</strong>. Please check your
+              inbox and click the link to activate your account.
             </p>
           </div>
         )}

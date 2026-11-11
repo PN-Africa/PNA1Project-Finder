@@ -75,7 +75,6 @@ const empty = {
   duration_in_days: "30",
   tasks: "",
   deliverables: "",
-  is_published: true,
 };
 
 const select =
@@ -93,7 +92,6 @@ export default function CreateProject({ id, onBack, onCreated }) {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(isEdit);
 
-  
   useEffect(() => {
     fetch(`${API_BASE}/projects/choices/`, { headers: authHeaders() })
       .then((r) => (r.ok ? r.json() : Promise.reject()))
@@ -121,7 +119,6 @@ export default function CreateProject({ id, onBack, onCreated }) {
           duration_in_days: data.duration_in_days?.toString() || "30",
           tasks: Array.isArray(data.tasks) ? data.tasks.join("\n") : "",
           deliverables: Array.isArray(data.deliverables) ? data.deliverables.join("\n") : "",
-          is_published: Boolean(data.is_published),
         });
       })
       .catch((err) => setErrors([err.message]))
@@ -129,8 +126,8 @@ export default function CreateProject({ id, onBack, onCreated }) {
   }, [id, isEdit]);
 
   const set = (e) => {
-    const { name, value, type, checked } = e.target;
-    setForm((f) => ({ ...f, [name]: type === "checkbox" ? checked : value }));
+    const { name, value } = e.target;
+    setForm((f) => ({ ...f, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
@@ -158,13 +155,12 @@ export default function CreateProject({ id, onBack, onCreated }) {
       business_problem: form.business_problem.trim(),
       objective: form.objective.trim(),
       professional_role: finalRole,
-      duration_in_days: parseInt(form.duration_in_days, 10),
+      duration_in_days: parseInt(form.duration_in_days, 10) || 30,
       industry: form.industry,
       difficulty_level: form.difficulty_level,
       stakeholders: form.stakeholders.split(/[\n,]/).map((x) => x.trim()).filter(Boolean),
       tasks: lines(form.tasks),
       deliverables: lines(form.deliverables),
-      is_published: form.is_published,
     };
 
     setSaving(true);
@@ -190,7 +186,6 @@ export default function CreateProject({ id, onBack, onCreated }) {
         return;
       }
 
-      
       if (file && data.id) {
         const fd = new FormData();
         fd.append(FILE_FIELD, file);
@@ -330,11 +325,6 @@ export default function CreateProject({ id, onBack, onCreated }) {
               <span className="mt-1 text-xs text-gray-400">PDF, DOCX or XLSX: Max 10MB</span>
             </div>
           </div>
-
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" name="is_published" checked={form.is_published} onChange={set} />
-            Publish immediately
-          </label>
 
           {errors.length > 0 && (
             <ul role="alert" className="list-disc rounded-md border border-red-300 bg-red-100 py-2 pl-7 pr-3 text-sm text-red-800">
