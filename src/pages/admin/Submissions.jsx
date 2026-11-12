@@ -9,7 +9,7 @@ const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem("toke
 const SUBMISSIONS_URL = `${API_BASE}/admin/simulations/?page_size=100`;
 const userUrl = (id) => `${API_BASE}/admin/users/${id}/`;
 const USER_ROUTE = (id) => `/admin/users/${id}`;
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 6;
 
 const NAVY = "text-[#17304d]";
 const MUTED = "text-[#7d8c99]";
@@ -35,9 +35,7 @@ const personName = (u) => {
 
 const countOf = (v) => (Array.isArray(v) ? v.length : Number(v) || 0);
 
-
 const idOf = (u) => (u && typeof u === "object" ? u.id ?? u.pk ?? u.user_id ?? null : null);
-
 
 const ownerIdOf = (s) => {
   const who = s.user ?? s.student ?? s.owner;
@@ -89,6 +87,7 @@ function useFetch(fn, deps) {
 
   return state;
 }
+
 const Page = ({ title, children }) => (
   <section className={`min-h-full bg-[#edf3f1] p-5 sm:p-8 ${NAVY}`}>
     <h1 className="mb-6 text-3xl font-semibold">{title}</h1>
@@ -176,7 +175,6 @@ function SubmissionFiles({ simulationId, onClose }) {
   );
 }
 
-
 function SubmissionsTable({ rows }) {
   const [expandedRow, setExpandedRow] = useState(null);
 
@@ -248,11 +246,12 @@ export function SubmissionsPage() {
     () => (data ?? []).filter((r) => !status || r.status === status),
     [data, status]
   );
-  const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const rows = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const current = Math.min(page, totalPages);
+  const rows = filtered.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE);
 
-  const pagerBtn =
-    "flex items-center gap-1 text-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:cursor-not-allowed disabled:text-[#7d8c99]";
+  const pageBtn =
+    "flex h-8 w-8 items-center justify-center rounded-md text-sm font-medium transition-colors disabled:cursor-not-allowed";
 
   return (
     <Page title="Submissions">
@@ -281,35 +280,48 @@ export function SubmissionsPage() {
       {data && data.length > 0 && filtered.length === 0 && (
         <p className={MUTED}>No submissions match this filter.</p>
       )}
+      
       {rows.length > 0 && <SubmissionsTable rows={rows} />}
 
-      {filtered.length > PAGE_SIZE && (
-        <div className="mt-5 flex items-center justify-end gap-4">
+      {totalPages > 1 && (
+        <div className="mt-6 flex items-center justify-end gap-2">
           <button
             type="button"
-            className={pagerBtn}
-            disabled={page === 1}
-            onClick={() => setPage((p) => p - 1)}
+            className={`${pageBtn} text-blue-600 hover:bg-blue-50 disabled:text-gray-400 disabled:hover:bg-transparent`}
+            disabled={current === 1}
+            onClick={() => setPage(current - 1)}
           >
-            <FiChevronLeft aria-hidden="true" /> Previous
+            <FiChevronLeft size={16} />
           </button>
-          <span>
-            {page} / {pages}
-          </span>
+
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
+            <button
+              key={n}
+              type="button"
+              onClick={() => setPage(n)}
+              className={`${pageBtn} ${
+                n === current 
+                  ? "bg-blue-600 text-white" 
+                  : "text-slate-600 hover:bg-slate-100"
+              }`}
+            >
+              {n}
+            </button>
+          ))}
+
           <button
             type="button"
-            className={pagerBtn}
-            disabled={page >= pages}
-            onClick={() => setPage((p) => p + 1)}
+            className={`${pageBtn} text-blue-600 hover:bg-blue-50 disabled:text-gray-400 disabled:hover:bg-transparent`}
+            disabled={current === totalPages}
+            onClick={() => setPage(current + 1)}
           >
-            Next <FiChevronRight aria-hidden="true" />
+            <FiChevronRight size={16} />
           </button>
         </div>
       )}
     </Page>
   );
 }
-
 
 function SimulationHistory({ simulations }) {
   if (!simulations.length) return <p className={MUTED}>No simulations started yet</p>;
@@ -362,13 +374,11 @@ export function UserProfilePage() {
     ]);
 
     return {
-      
       fetched: sameId(idOf(fetched), userId) ? fetched : null,
       sims: listOf(sims),
     };
   }, [userId]);
 
-  
   const simulations = useMemo(
     () => (data?.sims ?? []).filter((s) => sameId(ownerIdOf(s), userId)).map(toRow),
     [data, userId]
