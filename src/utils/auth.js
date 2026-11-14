@@ -13,17 +13,21 @@ const decodeToken = (token) => {
 
 export const getToken = () => {
   try {
-   
     return localStorage.getItem(TOKEN_KEY) || localStorage.getItem("access") || "";
   } catch {
     return "";
   }
 };
 
+
 export const isTokenValid = (token) => {
   if (!token) return false;
+
   const payload = decodeToken(token);
-  if (payload?.exp && payload.exp * 1000 < Date.now()) return false;
+  if (!payload) return false; // corrupted or not a JWT
+
+  if (payload.exp && payload.exp * 1000 <= Date.now()) return false; // expired
+
   return true;
 };
 
@@ -55,6 +59,7 @@ export const logout = () => {
     localStorage.removeItem(REFRESH_KEY);
     localStorage.removeItem(USER_KEY);
   } catch {
+    
     
   }
 };
