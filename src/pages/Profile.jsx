@@ -1,11 +1,46 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { fetchProfile, formatDate } from "../utils/profile";
+import DeleteAccountModal from "../components/user/DeleteAccountModal";
+
+const API_BASE = "https://project-finder-q5t2.onrender.com/api";
+
+
+const DELETE_URL = `${API_BASE}/auth/user/delete`;
+const DELETE_METHOD = "POST";
+
+
+const deleteErrorMessage = (status, data) => {
+  const fromServer =
+    data?.detail ||
+    data?.password?.[0] ||
+    data?.current_password?.[0] ||
+    data?.old_password?.[0] ||
+    data?.non_field_errors?.[0] ||
+    "";
+
+  if (status === 401 || status === 403) {
+    return fromServer || "Your session has expired. Please log in again and retry.";
+  }
+  if (status === 404 || status === 405) {
+    return `Account deletion isn't available right now (server error ${status}).`;
+  }
+  if (status >= 500) {
+    return "The server had a problem. Please try again later.";
+  }
+  return fromServer || `Deletion failed (error ${status}). Please try again.`;
+};
 
 const Profile = () => {
+  const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -19,8 +54,47 @@ const Profile = () => {
         if (!cancelled) setLoading(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  const handleDelete = async (password) => {
+    setDeleteError("");
+
+    
+    if (typeof password !== "string" || password === "") {
+      setDeleteError("Please enter your password.");
+      return;
+    }
+
+    setDeleteLoading(true);
+
+    try {
+      const res = await fetch(DELETE_URL, {
+        method: DELETE_METHOD,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({ password }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        console.error("Delete account failed:", res.status, data);
+        throw new Error(deleteErrorMessage(res.status, data));
+      }
+
+      
+      localStorage.clear();
+      navigate("/login");
+    } catch (err) {
+      setDeleteError(err.message || "Network error. Please try again.");
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
 
   return (
     <div className="mx-auto max-w-3xl p-6">
@@ -31,11 +105,7 @@ const Profile = () => {
 
       {profile && (
         <>
-          <p className="mt-4 rounded-md bg-[#D9F5E3] px-4 py-2 text-sm text-[#15803D]">
-            Profile loaded successfully
-          </p>
-
-          <div className="mt-6 space-y-4 rounded-lg bg-white p-6">
+          <div className="mt-6 space-y-4 rounded-lg bg-white p-6 shadow-sm">
             <div>
               <p className="text-xs uppercase tracking-wide text-slate-400">Full Name</p>
               <p className="mt-1 text-base font-medium text-[#17324D]">{profile.fullName || "—"}</p>
@@ -56,14 +126,35 @@ const Profile = () => {
             </div>
           </div>
 
-          <Link
-            to="/edit-profile"
-            className="mt-6 inline-block rounded-md bg-[#2563EB] px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-          >
-            Edit Profile
-          </Link>
+          <div className="mt-6 flex flex-col items-center justify-between gap-4 sm:flex-row">
+            <Link
+              to="/edit-profile"
+              className="w-full rounded-md bg-[#2563EB] px-5 py-2 text-center text-sm font-semibold text-white hover:bg-blue-700 sm:w-auto"
+            >
+              Edit Profile
+            </Link>
+
+            <button
+              type="button"
+              onClick={() => setShowDeleteModal(true)}
+              className="w-full rounded-md border border-red-200 bg-red-50 px-5 py-2 text-center text-sm font-medium text-red-600 hover:bg-red-100 sm:w-auto"
+            >
+              Delete Account
+            </button>
+          </div>
         </>
       )}
+
+      <DeleteAccountModal
+        open={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setDeleteError("");
+        }}
+        onConfirm={handleDelete}
+        loading={deleteLoading}
+        error={deleteError}
+      />
     </div>
   );
 };

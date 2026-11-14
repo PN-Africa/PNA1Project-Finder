@@ -86,7 +86,9 @@ const Login = () => {
           password: form.password,
         }),
       });
+      
       const data = await res.json().catch(() => ({}));
+      
       if (!res.ok) {
         setServerError(
           data.detail ||
@@ -99,6 +101,13 @@ const Login = () => {
       }
 
       setSession(data);
+
+      const pending = JSON.parse(localStorage.getItem("pending_deletions") || "[]");
+      if (pending.includes(form.email)) {
+        clearSession();
+        setServerError("Your account has been deactivated. Please contact the administrator.");
+        return;
+      }
 
       const currentUser = getCurrentUser();
       const userIsAdmin = isAdmin(currentUser);
@@ -293,7 +302,7 @@ const Login = () => {
             Reset your password
           </h3>
           <p className="mb-4 text-left text-sm leading-relaxed text-slate-500">
-            Enter the email registered with your account. A reset link will be sent.
+            Enter the email tied to your account. We will send you a link to reset your password.
           </p>
 
           <form onSubmit={handleForgot} noValidate className="flex flex-col text-left">
@@ -342,7 +351,7 @@ const Login = () => {
             Check your email
           </h3>
           <p className="mb-4 text-left text-sm leading-relaxed text-slate-500">
-             A password reset link has been sent to your email. Please check your inbox to continue.
+            We have sent a password reset link to your email. Please check your inbox to continue.
           </p>
           <button
             type="button"

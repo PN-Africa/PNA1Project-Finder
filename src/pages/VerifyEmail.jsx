@@ -6,17 +6,18 @@ const API_BASE = "https://project-finder-q5t2.onrender.com/api";
 
 const VerifyEmail = () => {
   const [searchParams] = useSearchParams();
-  const { key: pathKey } = useParams();
+  const { key: pathKey, uid: pathUid, token: pathToken } = useParams(); 
   const navigate = useNavigate();
   
-  
   const key = searchParams.get("key") || pathKey;
+  const uid = searchParams.get("uid") || pathUid;
+  const token = searchParams.get("token") || pathToken;
 
   const [status, setStatus] = useState("verifying");
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!key) {
+    if (!key && !token) {
       setStatus("error");
       setError("The verification link is missing a required token. Please check the URL or request a new verification email.");
       return;
@@ -24,10 +25,14 @@ const VerifyEmail = () => {
 
     const verify = async () => {
       try {
+        let body = {};
+        if (key) body = { key };
+        else if (uid && token) body = { uid, token };
+
         const res = await fetch(`${API_BASE}/auth/registration/verify-email/`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ key }),
+          body: JSON.stringify(body),
         });
 
         if (!res.ok) {
@@ -48,7 +53,7 @@ const VerifyEmail = () => {
     };
 
     verify();
-  }, [key, navigate]);
+  }, [key, uid, token, navigate]);
 
   return (
     <div className="mx-auto my-32 w-full max-w-[400px] rounded-xl bg-white px-7 py-8 text-center shadow-[0_2px_12px_rgba(15,31,61,0.08)]">
